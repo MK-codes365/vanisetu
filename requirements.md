@@ -1,4 +1,5 @@
-![Icon](asset/icon.jpeg)
+![icon](https://github.com/user-attachments/assets/d6260a8e-80b5-4e06-95f3-a6d991692117)
+
 
 # HLLRB - Requirements Specification
 
