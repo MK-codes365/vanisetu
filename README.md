@@ -1,0 +1,2 @@
+![icon](https://github.com/user-attachments/assets/59834159-c622-48ea-a675-e8f8e506a482)
+HLLRB (Hyper-Local Language & Resource Bridge) follows a modern cloud-native architecture built on AWS services, implementing a serverless backend with a Progressive Web Application (PWA) frontend. The system is designed for high availability, scalability, and security while maintaining simplicity for rural users
