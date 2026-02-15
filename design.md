@@ -5,7 +5,7 @@
 
 ## 1. System Architecture Overview
 
-HLLRB follows a modern cloud-native architecture built on AWS services, implementing a serverless backend with a Progressive Web Application (PWA) frontend. The system is designed for high availability, scalability, and security while maintaining simplicity for rural users.
+HLLRB (Hyper-Local Language & Resource Bridge) follows a modern cloud-native architecture built on AWS services, implementing a serverless backend with a Progressive Web Application (PWA) frontend. The system is designed for high availability, scalability, and security while maintaining simplicity for rural users.
 
 **Architecture Principles:**
 - Microservices-based serverless architecture
