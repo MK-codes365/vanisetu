@@ -11,7 +11,7 @@
 
 **Date:** February 15, 2026
 
-HLLRB is a voice-first digital platform designed to bridge the gap between rural citizens and government services by enabling access through local dialects. The platform leverages artificial intelligence to understand user intent in regional languages, verify uploaded documents, and seamlessly connect users to relevant government systems. By removing language barriers and simplifying the digital interface, HLLRB empowers underserved communities to access essential services independently.
+HLLRB (Hyper-Local Language & Resource Bridge) is a voice-first digital platform designed to bridge the gap between rural citizens and government services by enabling access through local dialects. The platform leverages artificial intelligence to understand user intent in regional languages, verify uploaded documents, and seamlessly connect users to relevant government systems. By removing language barriers and simplifying the digital interface, HLLRB empowers underserved communities to access essential services independently.
 
 ## 2. Objectives
 
