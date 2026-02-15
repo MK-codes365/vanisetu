@@ -1,4 +1,5 @@
-![Icon](asset/icon.jpeg)
+![icon](https://github.com/user-attachments/assets/44e02fa2-870e-4530-84ae-7834e47a92af)
+
 
 # HLLRB - System Design Document
 
