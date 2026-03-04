@@ -1,7 +1,7 @@
 <div align="center">
 
-<img width="503" height="503" alt="vani-modified" src="https://github.com/user-attachments/assets/efa14c07-eb2a-4c04-814f-959525b8df2d" />
-" width="150" height="150" alt="Vani-Setu Logo" style="border-radius: 50%; border: 3px solid #1e3a8a; padding: 10px; background: white;">
+<img width="150" height="150" alt="vani-modified" src="https://github.com/user-attachments/assets/efa14c07-eb2a-4c04-814f-959525b8df2d" />
+
 
 # 🎙️ Vani Setu
 
