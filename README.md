@@ -1,6 +1,7 @@
 <div align="center">
 
-<img src="public/vani-setu-logo.png" width="150" height="150" alt="Vani-Setu Logo" style="border-radius: 50%; border: 3px solid #1e3a8a; padding: 10px; background: white;">
+<img src="![vani](https://github.com/user-attachments/assets/3c78ffc1-fca7-4077-a7cd-01512a02fdb5)
+" width="150" height="150" alt="Vani-Setu Logo" style="border-radius: 50%; border: 3px solid #1e3a8a; padding: 10px; background: white;">
 
 # 🎙️ Vani Setu
 
