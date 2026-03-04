@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="<img width="100" height="100" alt="vani-modified" src="https://github.com/user-attachments/assets/6f22d5fc-91a1-468e-9c0e-203a3353ecc0" />
+<img width="100" height="100" alt="vani-modified" src="https://github.com/user-attachments/assets/6f22d5fc-91a1-468e-9c0e-203a3353ecc0" />
 
 # 🎙️ Vani Setu
 
