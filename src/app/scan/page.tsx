@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/context/language-context";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 
-export default function DocumentScanPage() {
+function ScanContent() {
   const { t } = useLanguage();
   const searchParams = useSearchParams();
   const serviceId = searchParams.get("id") || "ration";
@@ -422,5 +422,18 @@ export default function DocumentScanPage() {
         }
       `}</style>
     </div>
+  );
+}
+export default function DocumentScanPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <ScanContent />
+    </Suspense>
   );
 }
