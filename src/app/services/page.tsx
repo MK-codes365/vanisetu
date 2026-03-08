@@ -87,7 +87,7 @@ function ServicesContent() {
       <div className="absolute top-0 right-0 w-[50%] h-[50%] -z-10 bg-primary/5 blur-[120px]" />
 
       <header className="px-6 py-8 mx-auto max-w-7xl md:px-12 flex flex-col gap-6">
-        <Link href="/voice" className="flex items-center gap-2 group w-fit">
+        <Link href="/" className="flex items-center gap-2 group w-fit">
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-foreground/5 text-foreground group-hover:bg-primary group-hover:text-white transition-all">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -104,7 +104,7 @@ function ServicesContent() {
             </svg>
           </div>
           <span className="text-sm font-semibold text-foreground/70 group-hover:text-primary transition-colors">
-            {t("voiceSearch")}
+            {t("goBack")}
           </span>
         </Link>
 

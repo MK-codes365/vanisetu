@@ -48,13 +48,10 @@ async function setupDynamoDB() {
         TableName: TABLE_NAME,
         AttributeDefinitions: [{ AttributeName: "id", AttributeType: "S" }],
         KeySchema: [{ AttributeName: "id", KeyType: "HASH" }],
-        ProvisionedThroughput: {
-          ReadCapacityUnits: 5,
-          WriteCapacityUnits: 5,
-        },
+        BillingMode: "PAY_PER_REQUEST",
       });
       await dynamoClient.send(command);
-      console.log(`✓ Table "${TABLE_NAME}" created successfully.`);
+      console.log(`✓ Table "${TABLE_NAME}" created successfully (On-Demand).`);
     } else {
       console.error(`Error checking/creating table: ${error.message}`);
     }

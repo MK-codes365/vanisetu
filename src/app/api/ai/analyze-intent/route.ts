@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No transcript provided" }, { status: 400 });
     }
 
-    let modelId = process.env.AWS_BEDROCK_MODEL_ID || "us.amazon.nova-2-lite-v1:0";
+    let modelId = process.env.VANI_AWS_BEDROCK_MODEL_ID || "us.amazon.nova-2-lite-v1:0";
 
     const prompt = `
       You are an AI assistant for Vani Setu, a platform for rural Indian citizens.

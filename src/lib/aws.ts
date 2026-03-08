@@ -4,13 +4,13 @@ import { BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime";
 import { TranscribeStreamingClient } from "@aws-sdk/client-transcribe-streaming";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 
-const region = process.env.AWS_REGION || "ca-central-1";
-const dataRegion = process.env.AWS_DATA_REGION || "ap-south-1";
+const region = process.env.VANI_AWS_REGION || "ca-central-1";
+const dataRegion = process.env.VANI_AWS_DATA_REGION || "ap-south-1";
 
 const credentials = {
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-  ...(process.env.AWS_SESSION_TOKEN ? { sessionToken: process.env.AWS_SESSION_TOKEN } : {}),
+  accessKeyId: process.env.VANI_AWS_ACCESS_KEY_ID || "",
+  secretAccessKey: process.env.VANI_AWS_SECRET_ACCESS_KEY || "",
+  ...(process.env.VANI_AWS_SESSION_TOKEN ? { sessionToken: process.env.VANI_AWS_SESSION_TOKEN } : {}),
 };
 
 export const s3Client = new S3Client({

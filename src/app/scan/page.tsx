@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useLanguage } from "@/context/language-context";
 import { useState, useRef, useEffect } from "react";
 
 export default function DocumentScanPage() {
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const serviceId = searchParams.get("id") || "ration";
 
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
   const [status, setStatus] = useState<string>("");
@@ -61,69 +64,111 @@ export default function DocumentScanPage() {
   }, []);
 
   const handleScan = async () => {
-    if (!videoRef.current) return;
+    if (!isDemoMode && !videoRef.current) return;
 
     setIsScanning(true);
     setStatus("Capturing image...");
 
     try {
-      // 1. Capture frame
-      const canvas = document.createElement("canvas");
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      const ctx = canvas.getContext("2d");
-      ctx?.drawImage(videoRef.current, 0, 0);
-      const imageBase64 = canvas.toDataURL("image/jpeg", 0.8);
+      if (isDemoMode) {
+        // Mock Scanning Process
+        setStatus("Simulating AI Capture...");
+        await new Promise((r) => setTimeout(r, 1000));
+        setStatus("Analyzing Mock Document...");
+        await new Promise((r) => setTimeout(r, 1500));
+        setStatus("Syncing with Demo Database...");
+        await new Promise((r) => setTimeout(r, 800));
 
-      // 2. Upload to S3
-      setStatus("Uploading to S3 (AWS-Native Storage)...");
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageBase64,
-          filename: `scan-${Date.now()}.jpg`,
-        }),
-      });
-      const uploadData = await uploadRes.json();
-      if (uploadData.error) throw new Error(uploadData.error);
+        setExtractedData({
+          name: "MUKESH KUMAR (DEMO USER)",
+          id: "XXXX-XXXX-8821",
+        });
+      } else {
+        // Real Scanning Process
+        // 1. Capture frame
+        const canvas = document.createElement("canvas");
+        canvas.width = videoRef.current!.videoWidth;
+        canvas.height = videoRef.current!.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(videoRef.current!, 0, 0);
+        const imageBase64 = canvas.toDataURL("image/jpeg", 0.8);
 
-      // 3. Call AWS Textract on S3 Object
-      setStatus("Analyzing with AWS Textract AI...");
-      const ocrRes = await fetch("/api/ocr/extract-text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          s3Object: { bucket: uploadData.bucket, key: uploadData.key },
-        }),
-      });
-      const ocrData = await ocrRes.json();
-      if (ocrData.error) throw new Error(ocrData.error);
+        // 2. Upload to S3
+        setStatus("Uploading to S3 (AWS-Native Storage)...");
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageBase64,
+            filename: `scan-${Date.now()}.jpg`,
+          }),
+        });
+        const uploadData = await uploadRes.json();
+        if (uploadData.error) throw new Error(uploadData.error);
 
-      // 4. Save to DynamoDB
-      setStatus("Persisting to AWS DynamoDB...");
-      const dbRes = await fetch("/api/db/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: `sub-${Date.now()}`,
-          serviceId,
-          extractedText: ocrData.text,
-          s3Key: uploadData.key,
-        }),
-      });
-      const dbData = await dbRes.json();
-      if (dbData.error) throw new Error(dbData.error);
+        // 3. Call AWS Textract on S3 Object
+        setStatus("Analyzing with AWS Textract AI...");
+        const ocrRes = await fetch("/api/ocr/extract-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            s3Object: { bucket: uploadData.bucket, key: uploadData.key },
+          }),
+        });
+        const ocrData = await ocrRes.json();
+        if (ocrData.error) throw new Error(ocrData.error);
 
-      // Simple parsing logic for demonstration
-      setExtractedData({
-        name: ocrData.text.includes("MUKESH")
-          ? "MUKESH KUMAR SINGH"
-          : "RECOGNIZED USER",
-        id: ocrData.text.match(/\d{4}/)
-          ? `XXXX-XXXX-${ocrData.text.match(/\d{4}/)![0]}`
-          : "XXXX-XXXX-4582",
-      });
+        // 4. Save to DynamoDB
+        setStatus("Persisting to AWS DynamoDB...");
+        const dbRes = await fetch("/api/db/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: `sub-${Date.now()}`,
+            serviceId,
+            extractedText: ocrData.text,
+            s3Key: uploadData.key,
+          }),
+        });
+        const dbData = await dbRes.json();
+        if (dbData.error) throw new Error(dbData.error);
+
+        // Improved parsing logic for Aadhaar and Ration Cards
+        const fullText = ocrData.text;
+
+        // 1. Extract ID (12 digits for Aadhaar, or 10 for Ration)
+        const idMatch =
+          fullText.match(/\d{4}\s\d{4}\s\d{4}/) ||
+          fullText.match(/\d{12}/) ||
+          fullText.match(/\d{10}/);
+        const extractedId = idMatch
+          ? idMatch[0].replace(/\s/g, "-")
+          : "NOT_FOUND";
+
+        // 2. Extract Name (Look for keywords or patterns)
+        const lines = fullText.split(" ");
+        let extractedName = "USER NAME NOT DETECTED";
+
+        // Look for common ID labels
+        const nameKeywords = ["NAME", "DOB", "YEAR", "FATHER", "ADDRESS"];
+        const potentialNames = lines.filter(
+          (l: string) =>
+            l.length > 3 &&
+            !nameKeywords.some((k: string) => l.toUpperCase().includes(k)) &&
+            /^[A-Z\s]+$/.test(l),
+        );
+
+        if (potentialNames.length > 0) {
+          // Typically the first all-caps word/phrase after the header is the name
+          extractedName = potentialNames[0];
+        }
+
+        setExtractedData({
+          name: extractedName,
+          id:
+            extractedId === "NOT_FOUND" ? "XXXX-XXXX-ID-REDACTED" : extractedId,
+        });
+      }
 
       setScanComplete(true);
     } catch (err: any) {
@@ -139,7 +184,7 @@ export default function DocumentScanPage() {
     <div className="relative min-h-screen bg-background text-foreground flex flex-col items-center">
       {/* Header */}
       <header className="w-full px-6 py-8 mx-auto max-w-7xl md:px-12 flex items-center justify-between">
-        <Link href={`/services`} className="flex items-center gap-2 group">
+        <Link href="/" className="flex items-center gap-2 group">
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-foreground/5 text-foreground group-hover:bg-primary group-hover:text-white transition-all">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -156,11 +201,26 @@ export default function DocumentScanPage() {
             </svg>
           </div>
           <span className="text-sm font-semibold text-foreground/70 group-hover:text-primary">
-            Cancel
+            {t("goBack")}
           </span>
         </Link>
-        <div className="text-sm font-bold uppercase tracking-widest text-foreground/40">
-          Document Verification
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-foreground/5 border border-foreground/10">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-foreground/40">
+              Demo Mode
+            </span>
+            <button
+              onClick={() => setIsDemoMode(!isDemoMode)}
+              className={`w-10 h-5 rounded-full relative transition-colors ${isDemoMode ? "bg-primary" : "bg-zinc-300"}`}
+            >
+              <div
+                className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isDemoMode ? "left-6" : "left-1"}`}
+              />
+            </button>
+          </div>
+          <div className="text-sm font-bold uppercase tracking-widest text-foreground/40">
+            Document Verification
+          </div>
         </div>
       </header>
 
@@ -180,13 +240,43 @@ export default function DocumentScanPage() {
         <div className="relative aspect-[3/4] rounded-[40px] overflow-hidden bg-black shadow-2xl border-4 border-foreground/5 shadow-primary/5">
           {!scanComplete ? (
             <>
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover opacity-80"
-              />
+              {!isDemoMode ? (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover opacity-80"
+                />
+              ) : (
+                <div className="w-full h-full bg-zinc-900 flex flex-col items-center justify-center p-12 text-center">
+                  <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-6 ring-1 ring-white/10 animate-pulse">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="40"
+                      height="40"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="1"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="opacity-20"
+                    >
+                      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                      <circle cx="9" cy="9" r="2" />
+                      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                    </svg>
+                  </div>
+                  <h3 className="text-white font-bold text-xl mb-2">
+                    Ready to Scan
+                  </h3>
+                  <p className="text-white/40 text-sm">
+                    Demo Mode Active: Place your sample document in front of the
+                    screen and click the button below.
+                  </p>
+                </div>
+              )}
 
               {/* Camera Error Display */}
               {cameraError && (

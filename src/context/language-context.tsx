@@ -16,6 +16,17 @@ const translations = {
     heroSubtitle: "Connecting Every Voice to the Right Service",
     getStarted: "Get Started",
     howItWorks: "How it Works",
+    howItWorksSub:
+      "Accessing government services is now as simple as having a conversation.",
+    step1Title: "Speak Naturally",
+    step1Desc:
+      "Just tap the microphone and explain what you need in your local language or dialect.",
+    step2Title: "AI Analysis",
+    step2Desc:
+      "Our advanced AI identifies the exact government service and eligibility criteria for you.",
+    step3Title: "Direct Action",
+    step3Desc:
+      "Get an instant guide, audio assistance, or a direct link to the application portal.",
     voiceTitle: "Voice Assistant",
     voicePlaceholder: "Status: Ready to listen...",
     voiceListening: "Listening...",
@@ -128,6 +139,16 @@ const translations = {
     heroSubtitle: "हर आवाज को सही सेवा से जोड़ना",
     getStarted: "शुरू करें",
     howItWorks: "यह कैसे काम करता है",
+    howItWorksSub: "सरकारी सेवाओं तक पहुँचना अब बातचीत करने जितना आसान है।",
+    step1Title: "स्वाभाविक रूप से बोलें",
+    step1Desc:
+      "बस माइक्रोफ़ोन पर टैप करें और अपनी स्थानीय भाषा या बोली में बताएं कि आपको क्या चाहिए।",
+    step2Title: "एआई विश्लेषण",
+    step2Desc:
+      "हमारा उन्नत एआई आपके लिए सटीक सरकारी सेवा और पात्रता मानदंडों की पहचान करता है।",
+    step3Title: "सीधी कार्रवाई",
+    step3Desc:
+      "त्वरित मार्गदर्शिका, ऑडियो सहायता, या आवेदन पोर्टल का सीधा लिंक प्राप्त करें।",
     voiceTitle: "आवाज सहायक",
     voicePlaceholder: "स्थिति: सुनने के लिए तैयार...",
     voiceListening: "सुन रहे हैं...",

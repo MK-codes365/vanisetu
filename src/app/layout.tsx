@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 import { LanguageProvider } from "@/context/language-context";
-import LanguageToggle from "@/components/LanguageToggle";
+import Header from "@/components/Header";
 
 export default function RootLayout({
   children,
@@ -30,7 +30,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`antialiased font-sans`}>
         <LanguageProvider>
-          <LanguageToggle />
+          <Header />
           {children}
         </LanguageProvider>
         <script

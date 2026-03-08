@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: 'Outfit';
-  src: url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+  font-family: "Outfit";
+  src: url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap");
 }
 
 :root {
@@ -32,7 +32,7 @@
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-accent: var(--accent);
-  --font-sans: 'Outfit', 'Geist Sans', system-ui, sans-serif;
+  --font-sans: "Outfit", "Geist Sans", system-ui, sans-serif;
 }
 
 body {
@@ -51,7 +51,8 @@ body {
 }
 
 @keyframes pulse-slow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -68,4 +69,50 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* 3D Effects Utilities */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.feature-card-3d {
+  transition:
+    transform 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 0.6s ease;
+  transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0);
+}
+
+.feature-card-3d:hover {
+  transform: perspective(1000px) rotateX(4deg) rotateY(-4deg) translateZ(20px);
+  box-shadow:
+    -20px 20px 50px rgba(0, 0, 0, 0.1),
+    0 10px 30px rgba(79, 70, 229, 0.15);
+  border-color: var(--primary);
+}
+
+.feature-card-3d .floating-icon {
+  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  transform: translateZ(0px);
+}
+
+.feature-card-3d:hover .floating-icon {
+  transform: translateZ(50px) scale(1.1);
+}
+
+.feature-card-3d .floating-content {
+  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  transform: translateZ(0px);
+}
+
+.feature-card-3d:hover .floating-content {
+  transform: translateZ(30px);
 }

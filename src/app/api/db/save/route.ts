@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No ID provided" }, { status: 400 });
     }
 
-    const tableName = process.env.AWS_DYNAMODB_TABLE_NAME || "VaniSetuSubmissions";
+    const tableName = process.env.VANI_AWS_DYNAMODB_TABLE_NAME || "VaniSetuSubmissions";
 
     const item = {
       ...data,
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     console.error("DynamoDB Save Error:", error);
     let errorMessage = error.message;
     if (error.name === "ResourceNotFoundException") {
-      errorMessage = `DynamoDB Table "${process.env.AWS_DYNAMODB_TABLE_NAME || "VaniSetuSubmissions"}" does not exist. Please run "npx tsx scripts/setup-aws-resources.ts" to create it.`;
+      errorMessage = `DynamoDB Table "${process.env.VANI_AWS_DYNAMODB_TABLE_NAME || "VaniSetuSubmissions"}" does not exist. Please run "npx tsx scripts/setup-aws-resources.ts" to create it.`;
     }
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

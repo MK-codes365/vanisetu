@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/vani-setu-logo.png" width="150" height="150" alt="Vani-Setu Logo" style="border-radius: 50%; border: 3px solid #1e3a8a; padding: 10px; background: white;">
+<img src="c:\Users\mukui\Downloads\vani-modified.png" width="150" height="150" alt="Vani-Setu Logo" style="border-radius: 50%; border: 3px solid #1e3a8a; padding: 10px; background: white;">
 
 # 🎙️ Vani Setu
 
@@ -36,7 +36,7 @@ OCR capabilities to extract text from government documents instantly
 <td align="center" width="50%">
 
 ### 🤖 AI Intent Analysis
-Intelligent understanding of user requests using Claude AI
+Intelligent understanding of user requests using Amazon Nova 2 Lite
 
 </td>
 <td align="center" width="50%">
@@ -72,8 +72,8 @@ Works offline and installs like a native app
 |----------|---------------|
 | **Frontend** | ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white) ![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=next.js) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white) ![Tailwind](https://img.shields.io/badge/Tailwind-CSS-06B6D4?logo=tailwindcss&logoColor=white) |
 | **Backend** | ![Node.js](https://img.shields.io/badge/Node.js-API%20Routes-339933?logo=node.js&logoColor=white) |
-| **Cloud** | ![AWS S3](https://img.shields.io/badge/AWS-S3-FF9900?logo=amazon-s3&logoColor=white) ![DynamoDB](https://img.shields.io/badge/AWS-DynamoDB-527FFF?logo=amazondynamodb&logoColor=white) ![Textract](https://img.shields.io/badge/AWS-Textract-FF9900?logo=amazon-aws&logoColor=white) |
-| **AI** | ![Claude](https://img.shields.io/badge/Claude-API-000000?logo=anthropic&logoColor=white) |
+| **Cloud** | ![AWS S3](https://img.shields.io/badge/AWS-S3-FF9900?logo=amazon-s3&logoColor=white) ![DynamoDB](https://img.shields.io/badge/AWS-DynamoDB-527FFF?logo=amazondynamodb&logoColor=white) ![Textract](https://img.shields.io/badge/AWS-Textract-FF9900?logo=amazon-aws&logoColor=white) ![Bedrock](https://img.shields.io/badge/AWS-Bedrock-FF9900?logo=amazon-aws&logoColor=white) |
+| **AI** | ![Amazon Nova](https://img.shields.io/badge/Amazon-Nova%202%20Lite-FF9900?logo=amazon-aws&logoColor=white) |
 
 </div>
 
@@ -152,8 +152,8 @@ AWS_SECRET_ACCESS_KEY=your_secret_key_here
 AWS_S3_BUCKET_NAME=vanisetu-scans-prototype
 AWS_DYNAMODB_TABLE_NAME=VaniSetuSubmissions
 
-# 🤖 AI Configuration
-ANTHROPIC_API_KEY=your_claude_api_key_here
+# 🤖 AWS Bedrock Configuration
+AWS_BEDROCK_MODEL_ID=us.amazon.nova-2-lite-v1:0
 ```
 
 ### ⚙️ AWS Resources Setup
