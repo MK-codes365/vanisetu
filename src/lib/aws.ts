@@ -11,11 +11,14 @@ const dataRegion = process.env.VANI_AWS_DATA_REGION || process.env.VANI_DATA_REG
 const accessKeyId = process.env.VANI_AWS_ACCESS_KEY_ID || process.env.VANI_ACCESS_KEY_ID || "";
 const secretAccessKey = process.env.VANI_AWS_SECRET_ACCESS_KEY || process.env.VANI_SECRET_ACCESS_KEY || "";
 
-console.log("AWS Client Initialization Debug:");
-console.log("- Region:", region);
-console.log("- Data Region:", dataRegion);
-console.log("- Access Key ID:", accessKeyId ? `${accessKeyId.substring(0, 4)}...${accessKeyId.substring(accessKeyId.length - 4)}` : "MISSING");
-console.log("- Secret Key:", secretAccessKey ? "PRESENT (Masked)" : "MISSING");
+console.log("--- AWS Client Initialization Debug ---");
+console.log("Present VANI_ variables:", Object.keys(process.env).filter(k => k.startsWith("VANI_")).join(", "));
+console.log("- Region Source:", process.env.VANI_AWS_REGION ? "VANI_AWS_REGION" : (process.env.VANI_REGION ? "VANI_REGION" : "DEFAULT"));
+console.log("- Access Key Source:", process.env.VANI_AWS_ACCESS_KEY_ID ? "VANI_AWS_ACCESS_KEY_ID" : (process.env.VANI_ACCESS_KEY_ID ? "VANI_ACCESS_KEY_ID" : "NONE"));
+console.log("- Secret Key Source:", process.env.VANI_AWS_SECRET_ACCESS_KEY ? "VANI_AWS_SECRET_ACCESS_KEY" : (process.env.VANI_SECRET_ACCESS_KEY ? "VANI_SECRET_ACCESS_KEY" : "NONE"));
+console.log("- Masked Access Key:", accessKeyId ? `${accessKeyId.substring(0, 4)}...${accessKeyId.substring(accessKeyId.length - 4)}` : "MISSING");
+console.log("- Secret Key Status:", secretAccessKey ? "PRESENT (Masked)" : "MISSING");
+console.log("----------------------------------------");
 
 const credentials = {
   accessKeyId,

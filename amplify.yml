@@ -4,6 +4,9 @@ frontend:
     preBuild:
       commands:
         - npm ci
+        - echo "--- Environment Variable Diagnostic (Names Only) ---"
+        - env | grep VANI_ | cut -d= -f1 || true
+        - echo "----------------------------------------------------"
     build:
       commands:
         - npm run build
