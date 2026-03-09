@@ -5,44 +5,48 @@ import { StartStreamTranscriptionCommand, TranscribeStreamingClient } from "@aws
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { PollyClient } from "@aws-sdk/client-polly";
 
-// Hyper-robust helper to get env variables, stripping ALL non-printable characters and whitespace
-function getEnv(keyPrefix: string): string {
-  const env = process.env;
-  const keys = Object.keys(env);
-  
-  // Search for any key that matches when trimmed
-  const actualKey = keys.find(k => k.trim() === keyPrefix);
-  if (actualKey) {
-    const val = env[actualKey];
-    if (val) {
-      // Aggressively strip everything except printable ASCII
-      const cleaned = val.replace(/[^\x21-\x7E]/g, '').trim();
-      return cleaned;
-    }
-  }
-  return "";
-}
+// Explicitly reference all possible environment variables to ensure Next.js bundles them into the runtime
+// We use .trim() on the values in case the user copied trailing spaces/tabs into the Amplify Console values
+const accessKeyId = (
+  process.env.VANI_AWS_ACCESS_KEY_ID || 
+  process.env.VANI_ACCESS_KEY_ID || 
+  ""
+).trim();
 
-const region = getEnv("VANI_AWS_REGION") || getEnv("VANI_REGION") || "ca-central-1";
-const dataRegion = getEnv("VANI_AWS_DATA_REGION") || getEnv("VANI_DATA_REGION") || "ap-south-1";
+const secretAccessKey = (
+  process.env.VANI_AWS_SECRET_ACCESS_KEY || 
+  process.env.VANI_SECRET_ACCESS_KEY || 
+  ""
+).trim();
 
-const accessKeyId = getEnv("VANI_AWS_ACCESS_KEY_ID") || getEnv("VANI_ACCESS_KEY_ID");
-const secretAccessKey = getEnv("VANI_AWS_SECRET_ACCESS_KEY") || getEnv("VANI_SECRET_ACCESS_KEY");
+const region = (
+  process.env.VANI_AWS_REGION || 
+  process.env.VANI_REGION || 
+  "ca-central-1"
+).trim();
 
-console.log("--- AWS Client Initialization (Ultra-Robust v2) ---");
-console.log("- Node Environment:", process.env.NODE_ENV);
+const dataRegion = (
+  process.env.VANI_AWS_DATA_REGION || 
+  process.env.VANI_DATA_REGION || 
+  "ap-south-1"
+).trim();
+
+const sessionToken = (
+  process.env.VANI_AWS_SESSION_TOKEN || 
+  process.env.VANI_SESSION_TOKEN || 
+  ""
+).trim();
+
+console.log("--- AWS Client Initialization (Next.js Compatible Build) ---");
 console.log("- Access Key ID Length:", accessKeyId?.length || 0);
 console.log("- Secret Key Length:", secretAccessKey?.length || 0);
-console.log("- Session Token Status:", (getEnv("VANI_AWS_SESSION_TOKEN") || getEnv("VANI_SESSION_TOKEN")) ? "PRESENT" : "MISSING");
 console.log("- Region:", region);
 console.log("- Data Region:", dataRegion);
 
 const credentials = {
   accessKeyId,
   secretAccessKey,
-  ...(getEnv("VANI_AWS_SESSION_TOKEN") || getEnv("VANI_SESSION_TOKEN") ? { 
-    sessionToken: getEnv("VANI_AWS_SESSION_TOKEN") || getEnv("VANI_SESSION_TOKEN") 
-  } : {}),
+  ...(sessionToken ? { sessionToken } : {}),
 };
 
 // Initial connectivity self-test
