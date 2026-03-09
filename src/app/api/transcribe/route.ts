@@ -6,14 +6,23 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
-  // Runtime diagnostic
-  const creds = (transcribeClient.config as any).credentials;
-  const accessKey = typeof creds === 'function' ? 'async' : (creds?.accessKeyId || 'MISSING');
-  console.log("--- Transcribe API Request Diagnostics ---");
-  console.log("- Time:", new Date().toISOString());
-  console.log("- Runtime Access Key:", accessKey === 'async' ? 'async' : (accessKey !== 'MISSING' ? `${accessKey.substring(0, 4)}...${accessKey.substring(accessKey.length - 4)}` : 'MISSING'));
-  console.log("- Runtime Region:", transcribeClient.config.region);
-  console.log("-----------------------------------------");
+  // Runtime diagnostic - resolving async providers
+  try {
+    const credsProvider = (transcribeClient.config as any).credentials;
+    const resolvedCreds = typeof credsProvider === 'function' ? await credsProvider() : credsProvider;
+    const ak = resolvedCreds?.accessKeyId || 'MISSING';
+    
+    const regionProvider = transcribeClient.config.region;
+    const resolvedRegion = typeof regionProvider === 'function' ? await (regionProvider as any)() : regionProvider;
+
+    console.log("--- Transcribe API Request Diagnostics ---");
+    console.log("- Time:", new Date().toISOString());
+    console.log("- Resolved Access Key:", ak !== 'MISSING' ? `${ak.substring(0, 4)}...${ak.substring(ak.length - 4)}` : 'MISSING');
+    console.log("- Resolved Region:", resolvedRegion);
+    console.log("-----------------------------------------");
+  } catch (diagErr) {
+    console.log("Diagnostic resolution failed:", diagErr);
+  }
 
   try {
     const lang = (req.nextUrl.searchParams.get("lang") as string) || "hi-IN";
@@ -103,18 +112,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "AWS Access Denied. Check Amplify IAM Role permissions." }, { status: 403 });
     }
     if (error.name === "UnrecognizedClientException") {
+      const credsProvider = (transcribeClient.config as any).credentials;
+      const resolvedCreds = typeof credsProvider === 'function' ? await credsProvider().catch(() => null) : credsProvider;
+      const ak = resolvedCreds?.accessKeyId || 'MISSING';
+      const akPrefix = ak !== 'MISSING' ? ak.substring(0, 4) : 'MISSING';
+      
+      const regionProvider = transcribeClient.config.region;
+      const resolvedRegion = typeof regionProvider === 'function' ? await (regionProvider as any)().catch(() => 'unknown') : regionProvider;
+
       console.error("DEBUG: UnrecognizedClientException details:", {
         message: error.message,
         name: error.name,
         requestId: error.$metadata?.requestId,
-        region: transcribeClient.config.region,
+        resolvedRegion,
+        akPrefix,
       });
-      const creds = (transcribeClient.config as any).credentials;
-      const ak = typeof creds === 'function' ? 'async' : (creds?.accessKeyId || 'MISSING');
-      const akPrefix = ak !== 'async' && ak !== 'MISSING' ? ak.substring(0, 4) : ak;
       
       return NextResponse.json({ 
-        error: `Invalid AWS Credentials. Region: ${transcribeClient.config.region}, Key ID Starts with: ${akPrefix}. Check Amplify Console and ensure NO trailing spaces.` 
+        error: `Invalid AWS Credentials. Region: ${resolvedRegion}, Key ID Starts with: ${akPrefix}. Check Amplify Console and ensure NO trailing spaces.` 
       }, { status: 401 });
     }
     return NextResponse.json({ error: message }, { status: 500 });
