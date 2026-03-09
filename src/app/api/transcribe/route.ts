@@ -6,6 +6,14 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
+  // Runtime diagnostic
+  const creds = (transcribeClient.config as any).credentials;
+  const accessKey = typeof creds === 'function' ? 'async' : (creds?.accessKeyId || 'MISSING');
+  console.log("--- Transcribe API Request Diagnostics ---");
+  console.log("- Runtime Access Key:", accessKey === 'async' ? 'async' : (accessKey !== 'MISSING' ? `${accessKey.substring(0, 4)}...${accessKey.substring(accessKey.length - 4)}` : 'MISSING'));
+  console.log("- Runtime Region:", transcribeClient.config.region);
+  console.log("-----------------------------------------");
+
   try {
     const lang = (req.nextUrl.searchParams.get("lang") as string) || "hi-IN";
 

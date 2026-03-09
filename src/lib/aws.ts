@@ -5,17 +5,20 @@ import { StartStreamTranscriptionCommand, TranscribeStreamingClient } from "@aws
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { PollyClient } from "@aws-sdk/client-polly";
 
-// Robust helper to get env variables even if they have hidden trailing spaces/tabs in the name or value
+// Hyper-robust helper to get env variables, stripping ALL non-printable characters and whitespace
 function getEnv(keyPrefix: string): string {
   const env = process.env;
-  // Look for exact match first
-  if (env[keyPrefix]) return env[keyPrefix]!.trim();
+  const keys = Object.keys(env);
   
-  // Look for match with trailing whitespace in the key name
-  const actualKey = Object.keys(env).find(k => k.trim() === keyPrefix);
+  // Search for any key that matches when trimmed
+  const actualKey = keys.find(k => k.trim() === keyPrefix);
   if (actualKey) {
-    const value = env[actualKey];
-    return value ? value.trim() : "";
+    const val = env[actualKey];
+    if (val) {
+      // Aggressively strip everything except printable ASCII
+      const cleaned = val.replace(/[^\x21-\x7E]/g, '').trim();
+      return cleaned;
+    }
   }
   return "";
 }
@@ -26,10 +29,16 @@ const dataRegion = getEnv("VANI_AWS_DATA_REGION") || getEnv("VANI_DATA_REGION") 
 const accessKeyId = getEnv("VANI_AWS_ACCESS_KEY_ID") || getEnv("VANI_ACCESS_KEY_ID");
 const secretAccessKey = getEnv("VANI_AWS_SECRET_ACCESS_KEY") || getEnv("VANI_SECRET_ACCESS_KEY");
 
-console.log("--- AWS Client Initialization (Robust Build) ---");
-console.log("- Access Key Status:", accessKeyId ? "PRESENT (Masked)" : "MISSING");
-console.log("- Secret Key Status:", secretAccessKey ? "PRESENT (Masked)" : "MISSING");
-console.log("----------------------------------------");
+console.log("--- AWS Client Initialization (Ultra-Robust Version) ---");
+console.log("- Access Key Status:", accessKeyId ? `PRESENT (Length: ${accessKeyId.length})` : "MISSING");
+console.log("- Secret Key Status:", secretAccessKey ? `PRESENT (Length: ${secretAccessKey.length})` : "MISSING");
+if (accessKeyId && accessKeyId.length !== 20) {
+  console.log("- WARNING: Access Key ID length is not 20 characters!");
+}
+if (secretAccessKey && secretAccessKey.length !== 40) {
+  console.log("- WARNING: Secret Access Key length is not 40 characters!");
+}
+console.log("---------------------------------------------------------");
 
 const credentials = {
   accessKeyId,
