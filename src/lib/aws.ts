@@ -5,37 +5,37 @@ import { StartStreamTranscriptionCommand, TranscribeStreamingClient } from "@aws
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { PollyClient } from "@aws-sdk/client-polly";
 
-const region = process.env.VANI_AWS_REGION || process.env.VANI_REGION || "ca-central-1";
-const dataRegion = process.env.VANI_AWS_DATA_REGION || process.env.VANI_DATA_REGION || "ap-south-1";
-
-const accessKeyId = process.env.VANI_AWS_ACCESS_KEY_ID || process.env.VANI_ACCESS_KEY_ID || "";
-let secretAccessKey = process.env.VANI_AWS_SECRET_ACCESS_KEY || process.env.VANI_SECRET_ACCESS_KEY || "";
-
-console.log("--- AWS Client Initialization Debug ---");
-const vaniKeys = Object.keys(process.env).filter(k => k.startsWith("VANI_"));
-console.log("Present VANI_ variables:", vaniKeys.join(", "));
-
-if (!secretAccessKey) {
-  console.log("- WARNING: Secret Key not found by exact name. Searching candidates...");
-  const candidate = Object.keys(process.env).find(k => k.includes("VANI") && k.includes("SECRET"));
-  if (candidate) {
-    console.log(`- FOUND CANDIDATE: "${candidate}" (Length: ${candidate.length})`);
-    secretAccessKey = process.env[candidate] || "";
-  } else {
-    console.log("- No VANI/SECRET candidates found in process.env");
+// Robust helper to get env variables even if they have hidden trailing spaces/tabs in the name or value
+function getEnv(keyPrefix: string): string {
+  const env = process.env;
+  // Look for exact match first
+  if (env[keyPrefix]) return env[keyPrefix]!.trim();
+  
+  // Look for match with trailing whitespace in the key name
+  const actualKey = Object.keys(env).find(k => k.trim() === keyPrefix);
+  if (actualKey) {
+    const value = env[actualKey];
+    return value ? value.trim() : "";
   }
+  return "";
 }
 
-console.log("- Access Key Source:", process.env.VANI_AWS_ACCESS_KEY_ID ? "VANI_AWS_ACCESS_KEY_ID" : (process.env.VANI_ACCESS_KEY_ID ? "VANI_ACCESS_KEY_ID" : "NONE"));
-console.log("- Masked Access Key:", accessKeyId ? `${accessKeyId.substring(0, 4)}...${accessKeyId.substring(accessKeyId.length - 4)}` : "MISSING");
+const region = getEnv("VANI_AWS_REGION") || getEnv("VANI_REGION") || "ca-central-1";
+const dataRegion = getEnv("VANI_AWS_DATA_REGION") || getEnv("VANI_DATA_REGION") || "ap-south-1";
+
+const accessKeyId = getEnv("VANI_AWS_ACCESS_KEY_ID") || getEnv("VANI_ACCESS_KEY_ID");
+const secretAccessKey = getEnv("VANI_AWS_SECRET_ACCESS_KEY") || getEnv("VANI_SECRET_ACCESS_KEY");
+
+console.log("--- AWS Client Initialization (Robust Build) ---");
+console.log("- Access Key Status:", accessKeyId ? "PRESENT (Masked)" : "MISSING");
 console.log("- Secret Key Status:", secretAccessKey ? "PRESENT (Masked)" : "MISSING");
 console.log("----------------------------------------");
 
 const credentials = {
   accessKeyId,
   secretAccessKey,
-  ...(process.env.VANI_AWS_SESSION_TOKEN || process.env.VANI_SESSION_TOKEN ? { 
-    sessionToken: process.env.VANI_AWS_SESSION_TOKEN || process.env.VANI_SESSION_TOKEN 
+  ...(getEnv("VANI_AWS_SESSION_TOKEN") || getEnv("VANI_SESSION_TOKEN") ? { 
+    sessionToken: getEnv("VANI_AWS_SESSION_TOKEN") || getEnv("VANI_SESSION_TOKEN") 
   } : {}),
 };
 
