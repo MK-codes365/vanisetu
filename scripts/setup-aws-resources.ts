@@ -6,19 +6,19 @@ import * as path from "path";
 // Load environment variables from .env.local
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
-const region = process.env.AWS_REGION || "ca-central-1";
-const dataRegion = process.env.AWS_DATA_REGION || "ap-south-1";
+const region = process.env.VANI_AWS_REGION || "ca-central-1";
+const dataRegion = process.env.VANI_AWS_DATA_REGION || "ap-south-1";
 
 const credentials = {
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+  accessKeyId: process.env.VANI_AWS_ACCESS_KEY_ID || "",
+  secretAccessKey: process.env.VANI_AWS_SECRET_ACCESS_KEY || "",
 };
 
 const s3Client = new S3Client({ region: dataRegion, credentials });
 const dynamoClient = new DynamoDBClient({ region: dataRegion, credentials });
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || "vanisetu-scans-prototype";
-const TABLE_NAME = process.env.AWS_DYNAMODB_TABLE_NAME || "VaniSetuSubmissions";
+const BUCKET_NAME = process.env.VANI_AWS_S3_BUCKET_NAME || "vanisetu-scans-prototype";
+const TABLE_NAME = process.env.VANI_AWS_DYNAMODB_TABLE_NAME || "VaniSetuSubmissions";
 
 async function setupS3() {
   console.log(`Checking S3 Bucket: ${BUCKET_NAME}...`);
