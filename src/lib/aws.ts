@@ -55,19 +55,8 @@ console.log("- Access Key Length:", credentials.accessKeyId.length);
 console.log("- Secret Key Length:", credentials.secretAccessKey.length);
 console.log("- Region:", region);
 console.log("-------------------------------------------------");
-console.log("- Access Key ID Length:", accessKeyId?.length || 0);
-console.log("- Secret Key Length:", secretAccessKey?.length || 0);
-console.log("- Region:", region);
-console.log("- Data Region:", dataRegion);
-
-const credentials = {
-  accessKeyId,
-  secretAccessKey,
-  ...(sessionToken ? { sessionToken } : {}),
-};
-
 // Initial connectivity self-test
-if (accessKeyId && secretAccessKey) {
+if (credentials.accessKeyId && credentials.secretAccessKey) {
   const testClient = new S3Client({ region: dataRegion, credentials });
   testClient.send(new ListBucketsCommand({})).then(() => {
     console.log("- AWS Connection Self-Test: SUCCESS");
