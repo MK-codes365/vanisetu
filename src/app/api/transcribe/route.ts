@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
   const creds = (transcribeClient.config as any).credentials;
   const accessKey = typeof creds === 'function' ? 'async' : (creds?.accessKeyId || 'MISSING');
   console.log("--- Transcribe API Request Diagnostics ---");
+  console.log("- Time:", new Date().toISOString());
   console.log("- Runtime Access Key:", accessKey === 'async' ? 'async' : (accessKey !== 'MISSING' ? `${accessKey.substring(0, 4)}...${accessKey.substring(accessKey.length - 4)}` : 'MISSING'));
   console.log("- Runtime Region:", transcribeClient.config.region);
   console.log("-----------------------------------------");
@@ -106,8 +107,15 @@ export async function POST(req: NextRequest) {
         message: error.message,
         name: error.name,
         requestId: error.$metadata?.requestId,
+        region: transcribeClient.config.region,
       });
-      return NextResponse.json({ error: "Invalid AWS Credentials in Amplify environment variables. Debug: Check server logs for masked key status." }, { status: 401 });
+      const creds = (transcribeClient.config as any).credentials;
+      const ak = typeof creds === 'function' ? 'async' : (creds?.accessKeyId || 'MISSING');
+      const akPrefix = ak !== 'async' && ak !== 'MISSING' ? ak.substring(0, 4) : ak;
+      
+      return NextResponse.json({ 
+        error: `Invalid AWS Credentials. Region: ${transcribeClient.config.region}, Key ID Starts with: ${akPrefix}. Check Amplify Console and ensure NO trailing spaces.` 
+      }, { status: 401 });
     }
     return NextResponse.json({ error: message }, { status: 500 });
   }

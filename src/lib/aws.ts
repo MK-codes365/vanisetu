@@ -1,4 +1,4 @@
-import { S3Client } from "@aws-sdk/client-s3";
+import { S3Client, ListBucketsCommand } from "@aws-sdk/client-s3";
 import { TextractClient } from "@aws-sdk/client-textract";
 import { BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime";
 import { StartStreamTranscriptionCommand, TranscribeStreamingClient } from "@aws-sdk/client-transcribe-streaming";
@@ -29,16 +29,13 @@ const dataRegion = getEnv("VANI_AWS_DATA_REGION") || getEnv("VANI_DATA_REGION") 
 const accessKeyId = getEnv("VANI_AWS_ACCESS_KEY_ID") || getEnv("VANI_ACCESS_KEY_ID");
 const secretAccessKey = getEnv("VANI_AWS_SECRET_ACCESS_KEY") || getEnv("VANI_SECRET_ACCESS_KEY");
 
-console.log("--- AWS Client Initialization (Ultra-Robust Version) ---");
-console.log("- Access Key Status:", accessKeyId ? `PRESENT (Length: ${accessKeyId.length})` : "MISSING");
-console.log("- Secret Key Status:", secretAccessKey ? `PRESENT (Length: ${secretAccessKey.length})` : "MISSING");
-if (accessKeyId && accessKeyId.length !== 20) {
-  console.log("- WARNING: Access Key ID length is not 20 characters!");
-}
-if (secretAccessKey && secretAccessKey.length !== 40) {
-  console.log("- WARNING: Secret Access Key length is not 40 characters!");
-}
-console.log("---------------------------------------------------------");
+console.log("--- AWS Client Initialization (Ultra-Robust v2) ---");
+console.log("- Node Environment:", process.env.NODE_ENV);
+console.log("- Access Key ID Length:", accessKeyId?.length || 0);
+console.log("- Secret Key Length:", secretAccessKey?.length || 0);
+console.log("- Session Token Status:", (getEnv("VANI_AWS_SESSION_TOKEN") || getEnv("VANI_SESSION_TOKEN")) ? "PRESENT" : "MISSING");
+console.log("- Region:", region);
+console.log("- Data Region:", dataRegion);
 
 const credentials = {
   accessKeyId,
@@ -47,6 +44,18 @@ const credentials = {
     sessionToken: getEnv("VANI_AWS_SESSION_TOKEN") || getEnv("VANI_SESSION_TOKEN") 
   } : {}),
 };
+
+// Initial connectivity self-test
+if (accessKeyId && secretAccessKey) {
+  const testClient = new S3Client({ region: dataRegion, credentials });
+  testClient.send(new ListBucketsCommand({})).then(() => {
+    console.log("- AWS Connection Self-Test: SUCCESS");
+  }).catch((err) => {
+    console.log("- AWS Connection Self-Test: FAILED", err.name, err.message);
+  });
+}
+
+console.log("---------------------------------------------------------");
 
 export const s3Client = new S3Client({
   region: dataRegion,
