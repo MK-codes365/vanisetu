@@ -6,23 +6,21 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
-  // Runtime diagnostic - resolving async providers
-  try {
-    const credsProvider = (transcribeClient.config as any).credentials;
-    const resolvedCreds = typeof credsProvider === 'function' ? await credsProvider() : credsProvider;
-    const ak = resolvedCreds?.accessKeyId || 'MISSING';
-    
-    const regionProvider = transcribeClient.config.region;
-    const resolvedRegion = typeof regionProvider === 'function' ? await (regionProvider as any)() : regionProvider;
+  // Runtime diagnostic - deep dive into process.env
+  const vaniKeys = Object.keys(process.env).filter(k => k.includes("VANI"));
+  console.log("--- Runtime Environment Deep Dive ---");
+  console.log("- All VANI-related keys found:", vaniKeys.map(k => `"${k}" (len: ${k.length})`).join(", "));
+  
+  const credsProvider = (transcribeClient.config as any).credentials;
+  const resolvedCreds = typeof credsProvider === 'function' ? await credsProvider() : credsProvider;
+  const ak = resolvedCreds?.accessKeyId || 'MISSING';
+  
+  const regionProvider = transcribeClient.config.region;
+  const resolvedRegion = typeof regionProvider === 'function' ? await (regionProvider as any)() : regionProvider;
 
-    console.log("--- Transcribe API Request Diagnostics ---");
-    console.log("- Time:", new Date().toISOString());
-    console.log("- Resolved Access Key:", ak !== 'MISSING' ? `${ak.substring(0, 4)}...${ak.substring(ak.length - 4)}` : 'MISSING');
-    console.log("- Resolved Region:", resolvedRegion);
-    console.log("-----------------------------------------");
-  } catch (diagErr) {
-    console.log("Diagnostic resolution failed:", diagErr);
-  }
+  console.log("- Resolved Access Key (SDK):", ak !== 'MISSING' ? `${ak.substring(0, 4)}... (len: ${ak.length})` : 'MISSING');
+  console.log("- Resolved Region (SDK):", resolvedRegion);
+  console.log("-----------------------------------------");
 
   try {
     const lang = (req.nextUrl.searchParams.get("lang") as string) || "hi-IN";

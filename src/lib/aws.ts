@@ -5,39 +5,56 @@ import { StartStreamTranscriptionCommand, TranscribeStreamingClient } from "@aws
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { PollyClient } from "@aws-sdk/client-polly";
 
-// Explicitly reference all possible environment variables to ensure Next.js bundles them into the runtime
-// We use .trim() on the values in case the user copied trailing spaces/tabs into the Amplify Console values
-const accessKeyId = (
-  process.env.VANI_AWS_ACCESS_KEY_ID || 
-  process.env.VANI_ACCESS_KEY_ID || 
-  ""
-).trim();
+// Explicitly reference all possible environment variables for Next.js bundling
+const ENV_NAMES = {
+  ACCESS_KEY: 'VANI_AWS_ACCESS_KEY_ID',
+  ACCESS_KEY_ALT: 'VANI_ACCESS_KEY_ID',
+  SECRET_KEY: 'VANI_AWS_SECRET_ACCESS_KEY',
+  SECRET_KEY_ALT: 'VANI_SECRET_ACCESS_KEY',
+  REGION: 'VANI_AWS_REGION',
+  REGION_ALT: 'VANI_REGION',
+  DATA_REGION: 'VANI_AWS_DATA_REGION',
+  DATA_REGION_ALT: 'VANI_DATA_REGION',
+  SESSION_TOKEN: 'VANI_AWS_SESSION_TOKEN',
+  SESSION_TOKEN_ALT: 'VANI_SESSION_TOKEN',
+};
 
-const secretAccessKey = (
-  process.env.VANI_AWS_SECRET_ACCESS_KEY || 
-  process.env.VANI_SECRET_ACCESS_KEY || 
-  ""
-).trim();
+function getRawEnv(key: string): string | undefined {
+  const val = process.env[key];
+  if (val) return val.trim();
+  // Fallback to manual search for hidden characters (tabs/spaces in names)
+  const actualKey = Object.keys(process.env).find(k => k.trim() === key);
+  return actualKey ? process.env[actualKey]?.trim() : undefined;
+}
 
-const region = (
-  process.env.VANI_AWS_REGION || 
-  process.env.VANI_REGION || 
-  "ca-central-1"
-).trim();
+export function getAwsCredentials() {
+  const accessKeyId = getRawEnv(ENV_NAMES.ACCESS_KEY) || getRawEnv(ENV_NAMES.ACCESS_KEY_ALT) || "";
+  const secretAccessKey = getRawEnv(ENV_NAMES.SECRET_KEY) || getRawEnv(ENV_NAMES.SECRET_KEY_ALT) || "";
+  const sessionToken = getRawEnv(ENV_NAMES.SESSION_TOKEN) || getRawEnv(ENV_NAMES.SESSION_TOKEN_ALT);
 
-const dataRegion = (
-  process.env.VANI_AWS_DATA_REGION || 
-  process.env.VANI_DATA_REGION || 
-  "ap-south-1"
-).trim();
+  return {
+    accessKeyId,
+    secretAccessKey,
+    ...(sessionToken ? { sessionToken } : {}),
+  };
+}
 
-const sessionToken = (
-  process.env.VANI_AWS_SESSION_TOKEN || 
-  process.env.VANI_SESSION_TOKEN || 
-  ""
-).trim();
+export function getAwsRegion(type: 'config' | 'data' = 'config') {
+  if (type === 'data') {
+    return getRawEnv(ENV_NAMES.DATA_REGION) || getRawEnv(ENV_NAMES.DATA_REGION_ALT) || "ap-south-1";
+  }
+  return getRawEnv(ENV_NAMES.REGION) || getRawEnv(ENV_NAMES.REGION_ALT) || "ca-central-1";
+}
 
-console.log("--- AWS Client Initialization (Next.js Compatible Build) ---");
+const credentials = getAwsCredentials();
+const region = getAwsRegion('config');
+const dataRegion = getAwsRegion('data');
+
+console.log("--- AWS Client Initialization (Runtime Check) ---");
+console.log("- Access Key Length:", credentials.accessKeyId.length);
+console.log("- Secret Key Length:", credentials.secretAccessKey.length);
+console.log("- Region:", region);
+console.log("-------------------------------------------------");
 console.log("- Access Key ID Length:", accessKeyId?.length || 0);
 console.log("- Secret Key Length:", secretAccessKey?.length || 0);
 console.log("- Region:", region);
