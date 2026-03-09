@@ -5,13 +5,24 @@ import { StartStreamTranscriptionCommand, TranscribeStreamingClient } from "@aws
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { PollyClient } from "@aws-sdk/client-polly";
 
-const region = process.env.VANI_AWS_REGION || "ca-central-1";
-const dataRegion = process.env.VANI_AWS_DATA_REGION || "ap-south-1";
+const region = process.env.VANI_AWS_REGION || process.env.VANI_REGION || "ca-central-1";
+const dataRegion = process.env.VANI_AWS_DATA_REGION || process.env.VANI_DATA_REGION || "ap-south-1";
+
+const accessKeyId = process.env.VANI_AWS_ACCESS_KEY_ID || process.env.VANI_ACCESS_KEY_ID || "";
+const secretAccessKey = process.env.VANI_AWS_SECRET_ACCESS_KEY || process.env.VANI_SECRET_ACCESS_KEY || "";
+
+console.log("AWS Client Initialization Debug:");
+console.log("- Region:", region);
+console.log("- Data Region:", dataRegion);
+console.log("- Access Key ID:", accessKeyId ? `${accessKeyId.substring(0, 4)}...${accessKeyId.substring(accessKeyId.length - 4)}` : "MISSING");
+console.log("- Secret Key:", secretAccessKey ? "PRESENT (Masked)" : "MISSING");
 
 const credentials = {
-  accessKeyId: process.env.VANI_AWS_ACCESS_KEY_ID || "",
-  secretAccessKey: process.env.VANI_AWS_SECRET_ACCESS_KEY || "",
-  ...(process.env.VANI_AWS_SESSION_TOKEN ? { sessionToken: process.env.VANI_AWS_SESSION_TOKEN } : {}),
+  accessKeyId,
+  secretAccessKey,
+  ...(process.env.VANI_AWS_SESSION_TOKEN || process.env.VANI_SESSION_TOKEN ? { 
+    sessionToken: process.env.VANI_AWS_SESSION_TOKEN || process.env.VANI_SESSION_TOKEN 
+  } : {}),
 };
 
 export const s3Client = new S3Client({

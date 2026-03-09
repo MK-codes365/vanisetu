@@ -94,7 +94,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "AWS Access Denied. Check Amplify IAM Role permissions." }, { status: 403 });
     }
     if (error.name === "UnrecognizedClientException") {
-      return NextResponse.json({ error: "Invalid AWS Credentials in Amplify environment variables." }, { status: 401 });
+      console.error("DEBUG: UnrecognizedClientException details:", {
+        message: error.message,
+        name: error.name,
+        requestId: error.$metadata?.requestId,
+      });
+      return NextResponse.json({ error: "Invalid AWS Credentials in Amplify environment variables. Debug: Check server logs for masked key status." }, { status: 401 });
     }
     return NextResponse.json({ error: message }, { status: 500 });
   }
