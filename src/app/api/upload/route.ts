@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No image data provided" }, { status: 400 });
     }
 
-    const bucketName = process.env.VANI_AWS_S3_BUCKET_NAME || "vanisetu-scans-prototype";
+    const bucketName = process.env.VANI_AWS_S3_BUCKET_NAME || process.env.VANI_S3_BUCKET_NAME || "vanisetu-scans-prototype";
     const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
     const buffer = Buffer.from(base64Data, "base64");
 
