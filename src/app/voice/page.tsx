@@ -1,122 +1,228 @@
 "use client";
 
-import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/language-context";
+
+// Convert Float32 PCM samples → Int16 little-endian ArrayBuffer
+function float32ToInt16Buffer(floatSamples: Float32Array[]): ArrayBuffer {
+  const total = floatSamples.reduce((n, a) => n + a.length, 0);
+  const buf = new ArrayBuffer(total * 2);
+  const view = new DataView(buf);
+  let offset = 0;
+  for (const samples of floatSamples) {
+    for (let i = 0; i < samples.length; i++) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      offset += 2;
+    }
+  }
+  return buf;
+}
 
 export default function VoicePage() {
   const { t, language } = useLanguage();
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [statusMsg, setStatusMsg] = useState("");
   const [transcript, setTranscript] = useState("");
+  const [detectedLang, setDetectedLang] = useState("");
   const router = useRouter();
-  const recognitionRef = useRef<any>(null);
 
-  useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      // Dynamically set language based on toggle
-      recognitionRef.current.lang = language === "hi" ? "hi-IN" : "en-IN";
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const pcmChunksRef = useRef<Float32Array[]>([]);
 
-      recognitionRef.current.onresult = (event: any) => {
-        let finalTranscript = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          }
-        }
-        if (finalTranscript) {
-          setTranscript((prev) => (prev + " " + finalTranscript).trim());
-        }
+  const startRecording = async () => {
+    setTranscript("");
+    setStatusMsg("");
+    pcmChunksRef.current = [];
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      const audioCtx = new AudioContext({ sampleRate: 16000 });
+      audioCtxRef.current = audioCtx;
+
+      const source = audioCtx.createMediaStreamSource(stream);
+      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+      processorRef.current = processor;
+
+      processor.onaudioprocess = (e) => {
+        const channelData = e.inputBuffer.getChannelData(0);
+        pcmChunksRef.current.push(new Float32Array(channelData));
       };
 
-      recognitionRef.current.onerror = (event: any) => {
-        console.error("Speech recognition error:", event.error);
-        if (event.error !== "no-speech") {
-          setIsListening(false);
-        }
-      };
-    }
+      source.connect(processor);
+      processor.connect(audioCtx.destination);
 
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, [language]);
-
-  const toggleListening = () => {
-    if (isListening) {
-      setIsListening(false);
-      recognitionRef.current?.stop();
-      if (transcript.length > 2) {
-        handleAnalyze();
-      }
-    } else {
-      setTranscript("");
       setIsListening(true);
-      recognitionRef.current?.start();
+    } catch (err: unknown) {
+      console.error("Microphone access error:", err);
+      setStatusMsg("Microphone access denied. Please check your settings.");
     }
   };
 
-  const handleAnalyze = async () => {
+  const handleStreamingResponse = async (response: Response) => {
     setIsProcessing(true);
+    setStatusMsg("Transcribing audio...");
+
+    if (!response.body) return;
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let accumulatedTranscript = "";
+    let latestPartial = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n").filter((l) => l.trim());
+
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line);
+            if (data.language && data.language !== detectedLang) {
+              setDetectedLang(data.language);
+            }
+            if (data.text) {
+              setTranscript(data.text);
+              if (!data.isPartial) {
+                accumulatedTranscript += data.text + " ";
+                latestPartial = "";
+              } else {
+                latestPartial = data.text;
+              }
+            }
+          } catch (e) {
+            console.warn("Transcript parse error:", e);
+          }
+        }
+      }
+
+      const final = (accumulatedTranscript + latestPartial).trim();
+      if (final.length > 1) {
+        setTranscript(final);
+        await handleAnalyze(final);
+      } else {
+        setStatusMsg("I couldn't hear that. Could you try again?");
+        setIsProcessing(false);
+      }
+    } catch (err: unknown) {
+      console.error("Streaming error:", err);
+      setStatusMsg("Something went wrong with the connection.");
+      setIsProcessing(false);
+    }
+  };
+
+  const stopRecording = async () => {
+    setIsListening(false);
+
+    processorRef.current?.disconnect();
+    audioCtxRef.current?.close();
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+
+    if (pcmChunksRef.current.length === 0) {
+      setStatusMsg("No audio detected.");
+      return;
+    }
+
+    const pcmBuffer = float32ToInt16Buffer(pcmChunksRef.current);
+    const lang = language === "hi" ? "hi-IN" : "en-IN";
+
+    try {
+      const response = await fetch(`/api/transcribe?lang=${lang}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/octet-stream" },
+        body: pcmBuffer,
+      });
+
+      if (!response.ok) throw new Error("Transcription server error");
+
+      await handleStreamingResponse(response);
+    } catch (err: unknown) {
+      console.error("Transcribe failed:", err);
+      setStatusMsg("Failed to process your request.");
+      setIsProcessing(false);
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
+  const handleAnalyze = async (text: string) => {
+    // Basic Noise Filter: Ignore small common vocalizations
+    const noiseWords = [
+      "yeah",
+      "okay",
+      "the",
+      "hello",
+      "ji",
+      "जी",
+      "हां",
+      "हाँ",
+    ];
+    if (
+      text.split(" ").length === 1 &&
+      noiseWords.includes(text.toLowerCase())
+    ) {
+      setStatusMsg("I didn't quite catch that. Try again?");
+      setIsProcessing(false);
+      return;
+    }
+
+    setStatusMsg("Finding the best service for you...");
     try {
       const response = await fetch("/api/ai/analyze-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript }),
+        body: JSON.stringify({ transcript: text, language }),
       });
 
       const data = await response.json();
-
       if (data.error) throw new Error(data.error);
 
-      // Navigate to services with the AI's recommendation
+      if (data.service_id === "unknown") {
+        setStatusMsg(
+          "I'm sorry, I couldn't identify a government service in your request. Could you please rephrase it?",
+        );
+        setIsProcessing(false);
+        return;
+      }
+
+      const reasoning = data.reasoning || data.reason || "";
       router.push(
-        `/services?q=${encodeURIComponent(transcript.trim())}&recommend=${data.service_id}`,
+        `/services?q=${encodeURIComponent(text)}&recommend=${data.service_id}&reason=${encodeURIComponent(reasoning)}`,
       );
     } catch (err) {
       console.error("AI Analysis failed:", err);
-      // Fallback: just go to services with the transcript
-      router.push(`/services?q=${encodeURIComponent(transcript.trim())}`);
+      router.push(`/services?q=${encodeURIComponent(text)}`);
     }
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-background font-sans">
+    <div className="relative min-h-[calc(100-3.5rem)] flex flex-col items-center justify-center overflow-hidden bg-background font-sans pt-16">
       {/* Background Decorative Elements */}
       <div className="absolute top-0 left-0 w-full h-full -z-10 bg-[radial-gradient(circle_at_50%_50%,#4f46e510_0%,transparent_50%)]" />
 
-      {/* Header/Nav */}
-      <nav className="absolute top-0 w-full flex items-center justify-between px-6 py-8 mx-auto max-w-7xl md:px-12">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-foreground/5 text-foreground hover:bg-primary hover:text-white transition-all">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-          </div>
-          <span className="text-sm font-semibold text-foreground/70 group-hover:text-primary transition-colors">
-            {t("goBack")}
-          </span>
-        </Link>
-      </nav>
+      {/* Manual language hint to make it super clear */}
+      <div className="absolute top-8 right-8 z-50">
+        <p className="text-[10px] uppercase tracking-widest text-foreground/30 font-bold mb-1">
+          Active Mode
+        </p>
+        <div className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold">
+          {language === "hi" ? "हिन्दी (Hindi)" : "English"}
+        </div>
+      </div>
 
       <main className="flex flex-col items-center gap-12 text-center animate-fade-in w-full max-w-2xl px-6">
         {/* State Indicator */}
@@ -143,8 +249,11 @@ export default function VoicePage() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              {t("voiceAnalyzing")}
+              <span>{statusMsg || t("voiceAnalyzing")}</span>
             </div>
+          )}
+          {!isProcessing && statusMsg && (
+            <p className="text-sm font-medium text-red-500">{statusMsg}</p>
           )}
         </div>
 
@@ -181,20 +290,24 @@ export default function VoicePage() {
           >
             {isProcessing ? (
               <svg
+                className="animate-spin h-20 w-20 text-primary"
                 xmlns="http://www.w3.org/2000/svg"
-                width="80"
-                height="80"
-                viewBox="0 0 24 24"
                 fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="animate-bounce"
+                viewBox="0 0 24 24"
               >
-                <path d="M12 2v20" />
-                <path d="M9 22h6" />
-                <path d="M8 2h8" />
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
             ) : (
               <svg
@@ -222,7 +335,7 @@ export default function VoicePage() {
           {transcript ? (
             <div className="bg-foreground/5 rounded-2xl p-6 glass-morphism border border-foreground/5 transition-all">
               <p className="text-lg font-medium text-foreground italic">
-                "{transcript}..."
+                &quot;{transcript}...&quot;
               </p>
             </div>
           ) : (
@@ -240,12 +353,19 @@ export default function VoicePage() {
         </div>
 
         {/* Language Indicator */}
-        {!transcript && (
-          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl glass-morphism border border-foreground/5 text-sm font-medium text-foreground/70">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            {t("detecting")}: {t("languagesList")}
-          </div>
-        )}
+        <div className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl glass-morphism border border-foreground/5 text-sm font-medium text-foreground/70">
+          <span
+            className={`w-2 h-2 rounded-full ${detectedLang ? "bg-green-500" : "bg-zinc-400 animate-pulse"}`}
+          />
+          {detectedLang ? (
+            <span>
+              {t("detecting")}:{" "}
+              {detectedLang === "hi-IN" ? "Hindi (हिन्दी)" : "English"}
+            </span>
+          ) : (
+            <span>{t("detecting")}...</span>
+          )}
+        </div>
       </main>
 
       {/* Footer Instructions */}

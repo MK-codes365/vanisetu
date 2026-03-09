@@ -1,8 +1,9 @@
 import { S3Client } from "@aws-sdk/client-s3";
 import { TextractClient } from "@aws-sdk/client-textract";
 import { BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime";
-import { TranscribeStreamingClient } from "@aws-sdk/client-transcribe-streaming";
+import { StartStreamTranscriptionCommand, TranscribeStreamingClient } from "@aws-sdk/client-transcribe-streaming";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { PollyClient } from "@aws-sdk/client-polly";
 
 const region = process.env.VANI_AWS_REGION || "ca-central-1";
 const dataRegion = process.env.VANI_AWS_DATA_REGION || "ap-south-1";
@@ -30,7 +31,12 @@ export const bedrockClient = new BedrockRuntimeClient({
 });
 
 export const transcribeClient = new TranscribeStreamingClient({
-  region,
+  region: dataRegion,
+  credentials,
+});
+
+export const pollyClient = new PollyClient({
+  region: dataRegion,
   credentials,
 });
 

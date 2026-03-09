@@ -10,7 +10,7 @@ interface LanguageContextType {
   t: (key: string) => string;
 }
 
-const translations = {
+export const translations = {
   en: {
     heroTitle: "Vani Setu",
     heroSubtitle: "Connecting Every Voice to the Right Service",
@@ -133,6 +133,58 @@ const translations = {
       "Clean cooking fuel for a smoke-free life. Apply for a free LPG connection for your household today.",
     serviceUjjwalaFull:
       "Ujjwala Yojana provides free LPG connections to women from BPL households. It aims to protect the health of women and children.",
+    keyFeatures: "Key Features",
+    featureAiTitle: "AI Voice Assistant",
+    featureAiDesc: "Understandings your needs through natural conversation.",
+    featureMultilingualTitle: "Multilingual Support",
+    featureMultilingualDesc:
+      "Available in Hindi, English, and 50+ local dialects.",
+    featureScanTitle: "Smart Document Scan",
+    featureScanDesc: "Analyze and verify your documents instantly using AI.",
+    featureEligibilityTitle: "Direct Eligibility",
+    featureEligibilityDesc:
+      "Check your scheme eligibility in seconds, not hours.",
+    featureSecurityTitle: "Secure & Private",
+    featureSecurityDesc: "Your data is encrypted and handled with utmost care.",
+    featureSpeedTitle: "Instant Results",
+    featureSpeedDesc: "Get the information you need without any waiting time.",
+    featureBandwidthTitle: "Low-Bandwidth Ready",
+    featureBandwidthDesc:
+      "Optimized for 2G/3G speeds to work in the remotest areas.",
+    footerAbout:
+      "Building bridges between citizens and government services through technology.",
+    footerLinks: "Quick Links",
+    footerLegal: "Legal",
+    footerContact: "Contact",
+    privacyPolicy: "Privacy Policy",
+    termsOfService: "Terms of Service",
+    aboutUs: "About Us",
+    backToTop: "Back to Top",
+    trackingIdLabel: "Tracking ID",
+    estimatedTime: "Estimated Completion",
+    timeValue: "3-5 Working Days",
+    nextStepLabel: "What happens next?",
+    nextStepDesc:
+      "Our department experts will verify your documents. You'll receive an update once the process is complete.",
+    goHome: "Go to Home",
+    applyAnother: "Apply for Another Service",
+    successVoiceMsg:
+      "Your application has been submitted successfully. Your tracking ID is shown on the screen. Please keep it for your records.",
+    myApplications: "My Applications",
+    trackStatus: "Track Status",
+    noApplications: "No applications found.",
+    applicationDate: "Applied on",
+    statusPending: "In Review",
+    statusApproved: "Approved",
+    statusRejected: "Action Required",
+    viewReceipt: "View Receipt",
+    trackTitle: "Application Tracker",
+    trackSubtitle: "Real-time updates on your government service requests.",
+    submissionSuccess: "Submission Successful!",
+    referenceNumber: "Your Reference Number:",
+    finish: "Finish",
+    thankYou:
+      "The government office has received your documents. You will be notified of the next steps via SMS.",
   },
   hi: {
     heroTitle: "वाणी सेतु",
@@ -256,6 +308,61 @@ const translations = {
       "धुआं मुक्त जीवन के लिए स्वच्छ खाना पकाने का ईंधन। आज ही मुफ्त LPG कनेक्शन के लिए आवेदन करें।",
     serviceUjjwalaFull:
       "उज्ज्वला योजना गरीब परिवारों की महिलाओं को मुफ्त LPG कनेक्शन प्रदान करती है।",
+    keyFeatures: "मुख्य विशेषताएं",
+    featureAiTitle: "एआई वॉयस असिस्टेंट",
+    featureAiDesc: "स्वाभाविक बातचीत के माध्यम से आपकी आवश्यकताओं को समझना।",
+    featureMultilingualTitle: "बहुभाषी समर्थन",
+    featureMultilingualDesc:
+      "हिंदी, अंग्रेजी और 50+ स्थानीय बोलियों में उपलब्ध है।",
+    featureScanTitle: "स्मार्ट दस्तावेज़ स्कैन",
+    featureScanDesc:
+      "एआई का उपयोग करके अपने दस्तावेज़ों का तुरंत विश्लेषण और सत्यापन करें।",
+    featureEligibilityTitle: "सीधी पात्रता",
+    featureEligibilityDesc:
+      "अपनी योजना की पात्रता सेकंडों में जांचें, घंटों में नहीं।",
+    featureSecurityTitle: "सुरक्षित और निजी",
+    featureSecurityDesc:
+      "आपका डेटा एन्क्रिप्टेड है और अत्यधिक सावधानी के साथ प्रबंधित किया जाता है।",
+    featureSpeedTitle: "त्वरित परिणाम",
+    featureSpeedDesc:
+      "बिना किसी प्रतीक्षा के अपनी आवश्यक जानकारी प्राप्त करें।",
+    featureBandwidthTitle: "लो-बैंडविड्थ रेडी",
+    featureBandwidthDesc:
+      "दूरस्थ क्षेत्रों में काम करने के लिए 2G/3G गति हेतु अनुकूलित।",
+    footerAbout:
+      "तकनीक के माध्यम से नागरिकों और सरकारी सेवाओं के बीच सेतु का निर्माण।",
+    footerLinks: "त्वरित लिंक",
+    footerLegal: "कानूनी",
+    footerContact: "संपर्क",
+    privacyPolicy: "गोपनीयता नीति",
+    termsOfService: "सेवा की शर्तें",
+    aboutUs: "हमारे बारे में",
+    backToTop: "ऊपर जाएं",
+    trackingIdLabel: "ट्रैकिंग आईडी",
+    estimatedTime: "अनुमानित समय",
+    timeValue: "3-5 कार्य दिवस",
+    nextStepLabel: "आगे क्या होगा?",
+    nextStepDesc:
+      "हमारे विभाग के विशेषज्ञ आपके दस्तावेजों का सत्यापन करेंगे। प्रक्रिया पूरी होने के बाद आपको अपडेट मिल जाएगा।",
+    goHome: "होम पर जाएं",
+    applyAnother: "दूसरी सेवा के लिए आवेदन करें",
+    successVoiceMsg:
+      "आपका आवेदन सफलतापूर्वक जमा कर दिया गया है। आपकी ट्रैकिंग आईडी स्क्रीन पर दिखाई गई है। कृपया इसे अपने रिकॉर्ड के लिए सुरक्षित रखें।",
+    myApplications: "मेरे आवेदन",
+    trackStatus: "स्थिति ट्रैक करें",
+    noApplications: "कोई आवेदन नहीं मिला।",
+    applicationDate: "आवेदन की तिथि",
+    statusPending: "समीक्षा के अधीन",
+    statusApproved: "स्वीकृत",
+    statusRejected: "कार्रवाई की आवश्यकता",
+    viewReceipt: "रसीद देखें",
+    trackTitle: "आवेदन ट्रैकर",
+    trackSubtitle: "आपके सरकारी सेवा अनुरोधों पर वास्तविक समय अपडेट।",
+    submissionSuccess: "सफलतापूर्वक जमा किया गया!",
+    referenceNumber: "आपकी संदर्भ संख्या:",
+    finish: "पूरा करें",
+    thankYou:
+      "सरकारी कार्यालय को आपके दस्तावेज़ मिल गए हैं। आपको अगले चरणों के बारे में एसएमएस के माध्यम से सूचित किया जाएगा।",
   },
 };
 

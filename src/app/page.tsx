@@ -2,19 +2,31 @@
 
 import Link from "next/link";
 import { useLanguage } from "@/context/language-context";
+import { useState, useEffect } from "react";
 
 export default function Home() {
   const { t } = useLanguage();
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background font-sans">
-      {/* Background Decorative Elements */}
       <div className="absolute top-0 left-0 w-full h-full -z-10 bg-[radial-gradient(circle_at_20%_20%,#4f46e515_0%,transparent_20%),radial-gradient(circle_at_80%_80%,#f43f5e15_0%,transparent_20%)]" />
       <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px] animate-pulse-slow" />
       <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] rounded-full bg-accent/5 blur-[120px] animate-pulse-slow" />
 
       <main className="flex flex-col items-center justify-center px-6 pt-16 pb-32 mx-auto text-center max-w-7xl md:px-12 md:pt-24 lg:pt-32">
-        {/* Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary uppercase tracking-wider animate-fade-in">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
@@ -23,18 +35,15 @@ export default function Home() {
           {t("nextGenVoice")}
         </div>
 
-        {/* Heading */}
         <h1 className="mb-6 text-4xl font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl lg:text-8xl">
           <span className="block">{t("hllrbTitle")}</span>
           <span className="gradient-text">{t("forRuralIndia")}</span>
         </h1>
 
-        {/* Subheading */}
         <p className="max-w-2xl mb-12 text-lg leading-relaxed text-foreground/70 sm:text-xl md:text-2xl">
           {t("platformDesc")}
         </p>
 
-        {/* CTA Buttons */}
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
           <Link
             href="/voice"
@@ -81,7 +90,6 @@ export default function Home() {
           </Link>
         </div>
 
-        {/* How it Works Section */}
         <section id="how-it-works" className="w-full mt-32 py-16 scroll-mt-24">
           <div className="text-center mb-16 space-y-4">
             <h2 className="text-3xl font-extrabold text-foreground sm:text-5xl">
@@ -93,7 +101,6 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            {/* Connecting lines for desktop */}
             <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-primary/20 to-transparent -z-10" />
 
             {[
@@ -140,7 +147,70 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Impact & Education Section */}
+        <section id="features" className="w-full mt-32 py-16 scroll-mt-24">
+          <div className="text-center mb-16 space-y-4">
+            <h2 className="text-3xl font-extrabold text-foreground sm:text-5xl">
+              {t("keyFeatures")}
+            </h2>
+            <div className="h-1.5 w-24 bg-primary mx-auto rounded-full" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                title: t("featureAiTitle"),
+                desc: t("featureAiDesc"),
+                icon: "🤖",
+              },
+              {
+                title: t("featureMultilingualTitle"),
+                desc: t("featureMultilingualDesc"),
+                icon: "🌍",
+              },
+              {
+                title: t("featureScanTitle"),
+                desc: t("featureScanDesc"),
+                icon: "📄",
+              },
+              {
+                title: t("featureEligibilityTitle"),
+                desc: t("featureEligibilityDesc"),
+                icon: "⚖️",
+              },
+              {
+                title: t("featureSecurityTitle"),
+                desc: t("featureSecurityDesc"),
+                icon: "🔒",
+              },
+              {
+                title: t("featureSpeedTitle"),
+                desc: t("featureSpeedDesc"),
+                icon: "⚡",
+              },
+              {
+                title: t("featureBandwidthTitle"),
+                desc: t("featureBandwidthDesc"),
+                icon: "📡",
+              },
+            ].map((feature, i) => (
+              <div
+                key={i}
+                className="group p-8 glass-morphism rounded-[32px] border border-foreground/5 hover:border-primary/30 transition-all hover:bg-primary/[0.02] flex flex-col items-start gap-4 text-left"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:bg-primary/20 transition-all">
+                  {feature.icon}
+                </div>
+                <h3 className="text-xl font-bold text-foreground">
+                  {feature.title}
+                </h3>
+                <p className="text-foreground/60 leading-relaxed">
+                  {feature.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="w-full mt-32 py-16 border-y border-foreground/5 bg-gradient-to-br from-primary/5 to-transparent rounded-[50px] px-8 md:px-16 flex flex-col lg:flex-row items-center gap-12 text-left">
           <div className="flex-1 space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 text-[10px] font-bold uppercase tracking-widest">
@@ -205,56 +275,142 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        {/* Feature Highlights - 3D Section */}
-        <div className="grid grid-cols-1 gap-12 mt-32 sm:grid-cols-3 w-full perspective-1000">
-          {[
-            {
-              title: t("dialectsTitle"),
-              desc: t("dialectsDesc"),
-              icon: "🌐",
-              color: "from-blue-500/20 to-indigo-500/20",
-            },
-            {
-              title: t("voiceGuidedTitle"),
-              desc: t("voiceGuidedDesc"),
-              icon: "🎙️",
-              color: "from-purple-500/20 to-pink-500/20",
-            },
-            {
-              title: t("directConnectTitle"),
-              desc: t("directConnectDesc"),
-              icon: "⚡",
-              color: "from-amber-500/20 to-orange-500/20",
-            },
-          ].map((feature, i) => (
-            <div
-              key={i}
-              className="feature-card-3d preserve-3d relative flex flex-col items-center p-10 glass-morphism rounded-[40px] border border-foreground/10 group cursor-default"
-            >
-              <div
-                className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-100 transition-opacity duration-700 rounded-[40px] -z-10 blur-xl`}
-              />
-
-              <div className="floating-icon flex items-center justify-center w-20 h-20 mb-8 text-4xl rounded-3xl bg-white shadow-2xl preserve-3d ring-1 ring-black/5">
-                {feature.icon}
-              </div>
-
-              <div className="floating-content preserve-3d space-y-3">
-                <h3 className="text-2xl font-black text-foreground tracking-tight">
-                  {feature.title}
-                </h3>
-                <p className="text-base text-foreground/50 leading-relaxed font-medium">
-                  {feature.desc}
-                </p>
-              </div>
-
-              {/* Decorative 3D elements */}
-              <div className="absolute -bottom-2 -right-2 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors" />
-            </div>
-          ))}
-        </div>
       </main>
+
+      <footer className="border-t border-foreground/5 bg-foreground/[0.02] pt-24 pb-12 px-6 md:px-12">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+          <div className="space-y-6">
+            <Link
+              href="/"
+              className="text-2xl font-black tracking-tighter text-foreground group"
+            >
+              VANI
+              <span className="text-primary group-hover:text-accent transition-colors">
+                SETU
+              </span>
+            </Link>
+            <p className="text-sm text-foreground/50 leading-relaxed">
+              {t("footerAbout")}
+            </p>
+          </div>
+
+          <div>
+            <h4 className="font-bold mb-6 text-foreground uppercase tracking-widest text-xs">
+              {t("footerLinks")}
+            </h4>
+            <ul className="space-y-4 text-sm text-foreground/60">
+              <li>
+                <Link
+                  href="/voice"
+                  className="hover:text-primary transition-colors"
+                >
+                  {t("voiceTitle")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/services"
+                  className="hover:text-primary transition-colors"
+                >
+                  {t("govtServices")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/track"
+                  className="hover:text-primary transition-colors"
+                >
+                  {t("myApplications")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/learn"
+                  className="hover:text-primary transition-colors"
+                >
+                  {t("learn")}
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-bold mb-6 text-foreground uppercase tracking-widest text-xs">
+              {t("footerLegal")}
+            </h4>
+            <ul className="space-y-4 text-sm text-foreground/60">
+              <li>
+                <Link href="#" className="hover:text-primary transition-colors">
+                  {t("privacyPolicy")}
+                </Link>
+              </li>
+              <li>
+                <Link href="#" className="hover:text-primary transition-colors">
+                  {t("termsOfService")}
+                </Link>
+              </li>
+              <li>
+                <Link href="#" className="hover:text-primary transition-colors">
+                  {t("aboutUs")}
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-bold mb-6 text-foreground uppercase tracking-widest text-xs">
+              {t("footerContact")}
+            </h4>
+            <ul className="space-y-4 text-sm text-foreground/60">
+              <li className="flex items-center gap-2">
+                📧 support@vanisetu.in
+              </li>
+              <li className="flex items-center gap-2">📍 New Delhi, India</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto pt-8 border-t border-foreground/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-foreground/40 font-medium">
+          <p>© 2026 Vani Setu. Made with ❤️ for Rural India.</p>
+          <div className="flex gap-6">
+            <Link
+              href="#"
+              className="hover:text-foreground transition-colors underline decoration-primary/20 underline-offset-4 tracking-wider"
+            >
+              INSTAGRAM
+            </Link>
+            <Link
+              href="#"
+              className="hover:text-foreground transition-colors underline decoration-primary/20 underline-offset-4 tracking-wider"
+            >
+              TWITTER
+            </Link>
+          </div>
+        </div>
+      </footer>
+
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 z-[100] w-14 h-14 bg-primary text-white rounded-2xl shadow-2xl flex items-center justify-center hover:bg-primary-hover hover:-translate-y-1 active:scale-95 transition-all text-2xl group animate-fade-in"
+          title={t("backToTop")}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="group-hover:-translate-y-1 transition-transform"
+          >
+            <path d="m18 15-6-6-6 6" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

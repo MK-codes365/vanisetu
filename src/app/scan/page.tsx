@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useLanguage } from "@/context/language-context";
+import { useLanguage, translations } from "@/context/language-context";
 import { useState, useRef, useEffect, Suspense } from "react";
 
 function ScanContent() {
@@ -13,21 +13,23 @@ function ScanContent() {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [status, setStatus] = useState<string>("");
   const [extractedData, setExtractedData] = useState<{
     name: string;
     id: string;
   } | null>(null);
+  const [trackingId, setTrackingId] = useState("");
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string>("");
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { language } = useLanguage();
 
   useEffect(() => {
     let currentStream: MediaStream | null = null;
     async function startCamera() {
       try {
-        setCameraError(""); // Reset error
-        // Try to get environment camera first, then fallback to any camera
+        setCameraError("");
         let mediaStream;
         try {
           mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -71,7 +73,6 @@ function ScanContent() {
 
     try {
       if (isDemoMode) {
-        // Mock Scanning Process
         setStatus("Simulating AI Capture...");
         await new Promise((r) => setTimeout(r, 1000));
         setStatus("Analyzing Mock Document...");
@@ -84,8 +85,6 @@ function ScanContent() {
           id: "XXXX-XXXX-8821",
         });
       } else {
-        // Real Scanning Process
-        // 1. Capture frame
         const canvas = document.createElement("canvas");
         canvas.width = videoRef.current!.videoWidth;
         canvas.height = videoRef.current!.videoHeight;
@@ -93,7 +92,6 @@ function ScanContent() {
         ctx?.drawImage(videoRef.current!, 0, 0);
         const imageBase64 = canvas.toDataURL("image/jpeg", 0.8);
 
-        // 2. Upload to S3
         setStatus("Uploading to S3 (AWS-Native Storage)...");
         const uploadRes = await fetch("/api/upload", {
           method: "POST",
@@ -106,7 +104,6 @@ function ScanContent() {
         const uploadData = await uploadRes.json();
         if (uploadData.error) throw new Error(uploadData.error);
 
-        // 3. Call AWS Textract on S3 Object
         setStatus("Analyzing with AWS Textract AI...");
         const ocrRes = await fetch("/api/ocr/extract-text", {
           method: "POST",
@@ -118,9 +115,8 @@ function ScanContent() {
         const ocrData = await ocrRes.json();
         if (ocrData.error) throw new Error(ocrData.error);
 
-        // 4. Save to DynamoDB
         setStatus("Persisting to AWS DynamoDB...");
-        const dbRes = await fetch("/api/db/save", {
+        await fetch("/api/db/save", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -130,13 +126,8 @@ function ScanContent() {
             s3Key: uploadData.key,
           }),
         });
-        const dbData = await dbRes.json();
-        if (dbData.error) throw new Error(dbData.error);
 
-        // Improved parsing logic for Aadhaar and Ration Cards
         const fullText = ocrData.text;
-
-        // 1. Extract ID (12 digits for Aadhaar, or 10 for Ration)
         const idMatch =
           fullText.match(/\d{4}\s\d{4}\s\d{4}/) ||
           fullText.match(/\d{12}/) ||
@@ -145,11 +136,8 @@ function ScanContent() {
           ? idMatch[0].replace(/\s/g, "-")
           : "NOT_FOUND";
 
-        // 2. Extract Name (Look for keywords or patterns)
         const lines = fullText.split(" ");
         let extractedName = "USER NAME NOT DETECTED";
-
-        // Look for common ID labels
         const nameKeywords = ["NAME", "DOB", "YEAR", "FATHER", "ADDRESS"];
         const potentialNames = lines.filter(
           (l: string) =>
@@ -159,7 +147,6 @@ function ScanContent() {
         );
 
         if (potentialNames.length > 0) {
-          // Typically the first all-caps word/phrase after the header is the name
           extractedName = potentialNames[0];
         }
 
@@ -180,9 +167,114 @@ function ScanContent() {
     }
   };
 
+  const handleFinalSubmission = async () => {
+    setIsScanning(true);
+    setStatus("Finalizing your application...");
+
+    await new Promise((r) => setTimeout(r, 1500));
+
+    const newTrackingId = `VANI-${Math.floor(100000 + Math.random() * 900000)}`;
+    setTrackingId(newTrackingId);
+    setIsSubmitted(true);
+    setIsScanning(false);
+    setStatus("");
+
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      const msg = t("successVoiceMsg");
+      const utterance = new SpeechSynthesisUtterance(msg);
+      utterance.lang = language === "hi" ? "hi-IN" : "en-IN";
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  if (isSubmitted) {
+    return (
+      <div className="relative min-h-screen bg-background text-foreground flex flex-col items-center">
+        <header className="w-full px-6 py-8 mx-auto max-w-7xl md:px-12 flex items-center justify-between">
+          <Link
+            href="/"
+            className="text-2xl font-black tracking-tighter text-foreground group"
+          >
+            VANI
+            <span className="text-primary group-hover:text-accent transition-colors">
+              SETU
+            </span>
+          </Link>
+        </header>
+
+        <main className="flex-1 w-full max-w-2xl px-6 pb-24 flex flex-col items-center justify-center text-center">
+          <div className="relative mb-8">
+            <div className="w-24 h-24 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center text-5xl animate-bounce-slow">
+              ✓
+            </div>
+            <div className="absolute inset-0 w-24 h-24 bg-green-500/20 rounded-full animate-ping" />
+          </div>
+
+          <div className="space-y-2 mb-4">
+            <h1 className="text-4xl font-extrabold tracking-tight">
+              {translations.en.submissionSuccess}
+            </h1>
+            <h2 className="text-2xl font-bold text-primary tracking-tight">
+              {translations.hi.submissionSuccess}
+            </h2>
+          </div>
+
+          <div className="space-y-4 mb-12 max-w-sm">
+            <p className="text-foreground/60 leading-relaxed">
+              {translations.en.nextStepDesc}
+            </p>
+            <p className="text-foreground/60 leading-relaxed font-medium">
+              {translations.hi.nextStepDesc}
+            </p>
+          </div>
+
+          <div className="w-full space-y-4 mb-12">
+            <div className="glass-morphism p-6 rounded-3xl border border-foreground/5 bg-primary/[0.02]">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-primary/60 mb-2">
+                {t("trackingIdLabel")}
+              </div>
+              <div className="text-3xl font-black tracking-mono text-foreground font-mono">
+                {trackingId}
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="flex-1 glass-morphism p-4 rounded-2xl border border-foreground/5 flex flex-col items-center">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-foreground/40 mb-1">
+                  {t("estimatedTime")}
+                </div>
+                <div className="font-bold">{t("timeValue")}</div>
+              </div>
+              <div className="flex-1 glass-morphism p-4 rounded-2xl border border-foreground/5 flex flex-col items-center">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-foreground/40 mb-1">
+                  Status
+                </div>
+                <div className="font-bold text-green-500">In Review</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full flex flex-col gap-4">
+            <button
+              onClick={() => (window.location.href = "/services")}
+              className="w-full py-5 bg-primary text-white font-bold rounded-2xl shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all transform hover:-translate-y-1"
+            >
+              {t("applyAnother")}
+            </button>
+            <Link
+              href="/"
+              className="w-full py-5 glass-morphism border border-foreground/10 text-foreground font-bold rounded-2xl hover:bg-foreground/5 transition-all text-center"
+            >
+              {t("goHome")}
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen bg-background text-foreground flex flex-col items-center">
-      {/* Header */}
       <header className="w-full px-6 py-8 mx-auto max-w-7xl md:px-12 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-foreground/5 text-foreground group-hover:bg-primary group-hover:text-white transition-all">
@@ -236,7 +328,6 @@ function ScanContent() {
           </p>
         </div>
 
-        {/* Camera/Scan Container */}
         <div className="relative aspect-[3/4] rounded-[40px] overflow-hidden bg-black shadow-2xl border-4 border-foreground/5 shadow-primary/5">
           {!scanComplete ? (
             <>
@@ -278,7 +369,6 @@ function ScanContent() {
                 </div>
               )}
 
-              {/* Camera Error Display */}
               {cameraError && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 px-4 text-center z-40">
                   <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-4">
@@ -311,10 +401,8 @@ function ScanContent() {
                 </div>
               )}
 
-              {/* Viewfinder Overlay */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="w-[85%] aspect-[1.586/1] border-2 border-white/50 rounded-2xl relative">
-                  {/* Corner Accents */}
                   <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-xl" />
                   <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-xl" />
                   <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-xl" />
@@ -322,7 +410,6 @@ function ScanContent() {
                 </div>
               </div>
 
-              {/* Scanning Animation */}
               {isScanning && (
                 <div className="absolute inset-0 z-20 overflow-hidden pointer-events-none flex flex-col items-center justify-center">
                   <div className="w-full h-1 bg-primary shadow-[0_0_15px_rgba(79,70,229,1)] absolute top-0 animate-[scan_2s_linear_infinite]" />
@@ -334,7 +421,6 @@ function ScanContent() {
                 </div>
               )}
 
-              {/* Scan Button Overlay */}
               <div className="absolute bottom-10 inset-x-0 flex justify-center z-30">
                 <button
                   onClick={handleScan}
@@ -348,17 +434,24 @@ function ScanContent() {
               </div>
             </>
           ) : (
-            <div className="w-full h-full bg-foreground/5 flex flex-col items-center justify-center p-8 animate-fade-in">
+            <div className="w-full h-full bg-foreground/5 flex flex-col items-center justify-center p-8 animate-fade-in relative">
+              <div className="z-30 bg-black/60 backdrop-blur-md px-6 py-3 rounded-full border border-white/20 text-white font-bold text-sm flex items-center gap-3 absolute top-10 pointer-events-none">
+                {isScanning && (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                )}
+                {isScanning ? status : "Verification Complete"}
+              </div>
+
               <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mb-6 text-4xl">
                 ✓
               </div>
               <h3 className="text-2xl font-bold mb-2">Scan Successful</h3>
-              <p className="text-center text-foreground/60 mb-8">
-                Informations extracted from your document.
+              <p className="text-center text-foreground/60 mb-8 text-sm">
+                Details extracted with AWS Textract AI.
               </p>
 
               <div className="w-full space-y-4">
-                <div className="glass-morphism p-5 rounded-3xl border border-foreground/5">
+                <div className="glass-morphism p-5 rounded-3xl border border-foreground/5 bg-white/50">
                   <div className="text-[10px] font-bold uppercase tracking-widest text-foreground/40 mb-1">
                     Full Name
                   </div>
@@ -366,7 +459,7 @@ function ScanContent() {
                     {extractedData?.name || "MUKESH KUMAR SINGH"}
                   </div>
                 </div>
-                <div className="glass-morphism p-5 rounded-3xl border border-foreground/5">
+                <div className="glass-morphism p-5 rounded-3xl border border-foreground/5 bg-white/50">
                   <div className="text-[10px] font-bold uppercase tracking-widest text-foreground/40 mb-1">
                     ID Number
                   </div>
@@ -374,27 +467,26 @@ function ScanContent() {
                     {extractedData?.id || "XXXX-XXXX-4582"}
                   </div>
                 </div>
-                <div className="glass-morphism p-5 rounded-3xl border border-foreground/5">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-foreground/40 mb-1">
-                    Verification Status
-                  </div>
-                  <div className="font-bold text-lg text-green-500 flex items-center gap-2">
-                    Verified with AWS Textract AI ✓
-                  </div>
-                </div>
               </div>
 
-              <Link
-                href="/"
-                className="mt-10 w-full py-5 bg-primary text-white text-center font-bold rounded-2xl shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all"
+              <button
+                onClick={handleFinalSubmission}
+                disabled={isScanning}
+                className="mt-10 w-full py-5 bg-primary text-white text-center font-bold rounded-2xl shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
               >
-                Final Submission
-              </Link>
+                {isScanning ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Final Submission"
+                )}
+              </button>
             </div>
           )}
         </div>
 
-        {/* Tips */}
         {!scanComplete && (
           <div className="glass-morphism p-6 rounded-3xl border border-foreground/5 flex items-start gap-4">
             <div className="text-xl">💡</div>
@@ -418,6 +510,18 @@ function ScanContent() {
           }
           100% {
             top: 10%;
+          }
+        }
+        .animate-bounce-slow {
+          animation: bounce 3s infinite;
+        }
+        @keyframes bounce {
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-10px);
           }
         }
       `}</style>

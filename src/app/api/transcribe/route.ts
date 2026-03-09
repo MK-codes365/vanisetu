@@ -1,0 +1,94 @@
+import { transcribeClient } from "@/lib/aws";
+import { StartStreamTranscriptionCommand } from "@aws-sdk/client-transcribe-streaming";
+import { NextRequest, NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const maxDuration = 30;
+
+export async function POST(req: NextRequest) {
+  try {
+    const lang = (req.nextUrl.searchParams.get("lang") as string) || "hi-IN";
+
+    if (!req.body) {
+      return NextResponse.json({ error: "No audio data provided" }, { status: 400 });
+    }
+
+    // Adapt the Request's ReadableStream to an AsyncIterable for AWS SDK
+    const reader = req.body.getReader();
+    const CHUNK_SIZE = 8192; 
+
+    async function* audioStream() {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        for (let offset = 0; offset < value.length; offset += CHUNK_SIZE) {
+          const chunk = value.slice(offset, offset + CHUNK_SIZE);
+          yield { AudioEvent: { AudioChunk: chunk } };
+        }
+      }
+    }
+
+    const command = new StartStreamTranscriptionCommand({
+      IdentifyLanguage: true,
+      LanguageOptions: "en-IN,hi-IN",
+      PreferredLanguage: lang as any,
+      MediaEncoding: "pcm",       // Raw signed 16-bit PCM, little-endian
+      MediaSampleRateHertz: 16000, // Must match frontend sampleRate
+      AudioStream: audioStream(),
+    });
+
+    console.log(`Starting transcription stream (Hint: ${lang}, Region: ${transcribeClient.config.region})`);
+
+    const response = await transcribeClient.send(command);
+
+    if (!response.TranscriptResultStream) {
+      throw new Error("Failed to start transcription stream");
+    }
+
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          let identifiedLang = "";
+          for await (const event of response.TranscriptResultStream!) {
+            const newLang = event.TranscriptEvent?.Transcript?.Results?.[0]?.LanguageCode;
+            if (newLang && newLang !== identifiedLang) {
+              identifiedLang = newLang;
+            }
+
+            if (event.TranscriptEvent?.Transcript?.Results) {
+              for (const result of event.TranscriptEvent.Transcript.Results) {
+                const transcript = result.Alternatives?.[0]?.Transcript;
+                if (transcript) {
+                  const data = JSON.stringify({
+                    text: transcript,
+                    isPartial: result.IsPartial,
+                    language: identifiedLang || lang,
+                  });
+                  controller.enqueue(encoder.encode(data + "\n"));
+                }
+              }
+            }
+          }
+        } catch (err) {
+          controller.error(err);
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Transcribe Error:", error);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
+}

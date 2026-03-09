@@ -4,67 +4,69 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-    const { transcript } = await req.json();
+    const { transcript, language } = await req.json();
 
     if (!transcript) {
       return NextResponse.json({ error: "No transcript provided" }, { status: 400 });
     }
 
+    const isHindi = language === "hi";
     let modelId = process.env.VANI_AWS_BEDROCK_MODEL_ID || "us.amazon.nova-2-lite-v1:0";
 
     const prompt = `
       You are an AI assistant for Vani Setu, a platform for rural Indian citizens.
       Analyze the following user request and determine which government service they need.
-      The request might be in English, Hindi (Devanagari or Romanized), or other regional languages.
 
       User Request: "${transcript}"
+      Language Preference: ${isHindi ? "Hindi (हिन्दी)" : "English"}
 
       Available Service IDs:
       - ration: Ration Card (Food & Civil Supplies / राशन कार्ड)
       - aadhar: Aadhaar Services (Identity / आधार कार्ड)
+      - pmkisan: PM-Kisan (Agriculture / किसान सम्मान निधि)
+      - ayushman: Ayushman Bharat (Health / आयुष्मान भारत)
+      - awas: PM Awas Yojana (Housing / आवास योजना)
       - pension: Old Age Pension (Social Welfare / पेंशन)
-      - birth: Birth Certificate (Certificates / जन्म प्रमाण पत्र)
-      - land: Land Records (Revenue / जमीन के कागज)
-      - health: Digital Health Card (Health / स्वास्थ्य कार्ड)
+      - unknown: Use this if the request is gibberish, noise, or not related to govt services.
 
       Return a JSON response with:
-      1. "service_id": One of [ration, aadhar, pension, birth, land, health]
-      2. "confidence": A score between 0 and 1
-      3. "reasoning": A brief explanation in simple Hindi or English.
+      1. "service_id": One of [ration, aadhar, pmkisan, ayushman, awas, pension, unknown]
+      2. "confidence": A score between 0 and 1.
+      3. "reasoning": A brief explanation in ${isHindi ? "pure Hindi (Devanagari)" : "simple English"}. 
+         IMPORTANT: Since the user's interface is in ${isHindi ? "Hindi" : "English"}, you MUST provide the reasoning in ${isHindi ? "Hindi" : "English"}.
 
-      IMPORTANT: Even if the user speaks in Hindi, you MUST return one of the standard English "service_id" strings above.
+      CRITICAL: If the user says something that is NOT a request (e.g., just "Yeah" or "The"), return "unknown".
     `;
 
     let input: any;
     
-    // Check which model we are using to format the request correctly
+    // Model-specific payload formatting
     if (modelId.includes("titan-text")) {
       input = {
         modelId,
         contentType: "application/json",
         accept: "application/json",
         body: JSON.stringify({
-          inputText: prompt + "\nBe extremely concise. Return ONLY the JSON.",
+          inputText: prompt + "\nRespond only in valid JSON.",
           textGenerationConfig: {
-            maxTokenCount: 100,
+            maxTokenCount: 500,
             temperature: 0.1,
             topP: 0.9,
           },
         }),
       };
     } else if (modelId.includes("claude-3")) {
-      // Claude 3 formatting
       input = {
         modelId,
         contentType: "application/json",
         accept: "application/json",
         body: JSON.stringify({
           anthropic_version: "bedrock-2023-05-31",
-          max_tokens: 100,
+          max_tokens: 500,
           messages: [
             {
               role: "user",
-              content: [{ type: "text", text: prompt + "\nBe extremely concise. Return ONLY the JSON." }],
+              content: [{ type: "text", text: prompt + "\nRespond only in valid JSON." }],
             },
           ],
           temperature: 0.1,
@@ -72,7 +74,6 @@ export async function POST(req: Request) {
         }),
       };
     } else {
-      // Default Nova formatting
       input = {
         modelId,
         contentType: "application/json",
@@ -81,11 +82,11 @@ export async function POST(req: Request) {
           messages: [
             {
               role: "user",
-              content: [{ text: prompt + "\nBe extremely concise. Return ONLY the JSON." }],
+              content: [{ text: prompt + "\nRespond only in valid JSON." }],
             },
           ],
           inferenceConfig: {
-            maxTokens: 100,
+            maxTokens: 500,
             temperature: 0.1,
             topP: 0.9,
           },
@@ -97,7 +98,6 @@ export async function POST(req: Request) {
     const response = await bedrockClient.send(command);
     const responseBody = JSON.parse(new TextDecoder().decode(response.body));
     
-    // Extract the JSON from the response based on the model
     let aiText = "";
     if (modelId.includes("titan-text")) {
       aiText = responseBody.results[0].outputText;
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
     }
     
     const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-    const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { error: "Failed to parse AI response" };
+    const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { error: "Parse error" };
 
     return NextResponse.json(result);
   } catch (error: any) {
