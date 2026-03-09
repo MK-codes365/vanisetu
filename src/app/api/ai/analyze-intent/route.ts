@@ -112,7 +112,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error("Bedrock Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("AI Analysis Error:", error);
+    const message = error.message || "Unknown error";
+    const status = error.name === "ServiceUnavailableException" ? 503 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

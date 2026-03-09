@@ -141,12 +141,15 @@ export default function VoicePage() {
         body: pcmBuffer,
       });
 
-      if (!response.ok) throw new Error("Transcription server error");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server Error (${response.status})`);
+      }
 
       await handleStreamingResponse(response);
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error("Transcribe failed:", err);
-      setStatusMsg("Failed to process your request.");
+      setStatusMsg(err.message || "Failed to process your request.");
       setIsProcessing(false);
     }
   };

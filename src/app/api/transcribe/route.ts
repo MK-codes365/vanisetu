@@ -86,9 +86,16 @@ export async function POST(req: NextRequest) {
         "Connection": "keep-alive",
       },
     });
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+  } catch (error: any) {
     console.error("Transcribe Error:", error);
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    const message = error.message || "Unknown error";
+    // Check for common AWS permission/configuration errors
+    if (error.name === "AccessDeniedException") {
+      return NextResponse.json({ error: "AWS Access Denied. Check Amplify IAM Role permissions." }, { status: 403 });
+    }
+    if (error.name === "UnrecognizedClientException") {
+      return NextResponse.json({ error: "Invalid AWS Credentials in Amplify environment variables." }, { status: 401 });
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
