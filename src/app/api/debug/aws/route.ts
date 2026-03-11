@@ -19,6 +19,7 @@ export async function GET() {
   return NextResponse.json({
     timestamp: new Date().toISOString(),
     environment: envVars,
+    allKeys: Object.keys(process.env).sort(), // Reveal all keys for debugging
     nodeVersion: process.version,
     platform: process.platform,
   });
