@@ -1,4 +1,4 @@
-import { transcribeClient } from "@/lib/aws";
+import { getTranscribeClient } from "@/lib/aws";
 import { StartStreamTranscriptionCommand } from "@aws-sdk/client-transcribe-streaming";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -6,21 +6,18 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
-  // Runtime diagnostic - deep dive into process.env
-  const vaniKeys = Object.keys(process.env).filter(k => k.includes("VANI"));
-  console.log("--- Runtime Environment Deep Dive ---");
-  console.log("- All VANI-related keys found:", vaniKeys.map(k => `"${k}" (len: ${k.length})`).join(", "));
-  
-  const credsProvider = (transcribeClient.config as any).credentials;
-  const resolvedCreds = typeof credsProvider === 'function' ? await credsProvider() : credsProvider;
-  const ak = resolvedCreds?.accessKeyId || 'MISSING';
-  
-  const regionProvider = transcribeClient.config.region;
-  const resolvedRegion = typeof regionProvider === 'function' ? await (regionProvider as any)() : regionProvider;
+  // Create a fresh client per request — reads credentials from process.env now
+  const transcribeClient = getTranscribeClient();
 
-  console.log("- Resolved Access Key (SDK):", ak !== 'MISSING' ? `${ak.substring(0, 4)}... (len: ${ak.length})` : 'MISSING');
-  console.log("- Resolved Region (SDK):", resolvedRegion);
-  console.log("-----------------------------------------");
+  // Runtime diagnostic
+  const vaniKeys = Object.keys(process.env).filter(k => k.includes("VANI"));
+  const ak = (transcribeClient.config as any).credentials?.accessKeyId || 'MISSING';
+  const region = transcribeClient.config.region;
+  console.log("--- Runtime Diagnostic ---");
+  console.log("- VANI keys:", vaniKeys.join(", ") || "(none)");
+  console.log("- Access Key:", ak !== 'MISSING' ? `${ak.substring(0, 4)}... (len: ${ak.length})` : 'MISSING');
+  console.log("- Region:", region);
+  console.log("--------------------------");
 
   try {
     const lang = (req.nextUrl.searchParams.get("lang") as string) || "hi-IN";
@@ -31,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     // Adapt the Request's ReadableStream to an AsyncIterable for AWS SDK
     const reader = req.body.getReader();
-    const CHUNK_SIZE = 8192; 
+    const CHUNK_SIZE = 8192;
 
     async function* audioStream() {
       while (true) {
@@ -49,12 +46,10 @@ export async function POST(req: NextRequest) {
       IdentifyLanguage: true,
       LanguageOptions: "en-IN,hi-IN",
       PreferredLanguage: lang as any,
-      MediaEncoding: "pcm",       // Raw signed 16-bit PCM, little-endian
-      MediaSampleRateHertz: 16000, // Must match frontend sampleRate
+      MediaEncoding: "pcm",
+      MediaSampleRateHertz: 16000,
       AudioStream: audioStream(),
     });
-
-    console.log(`Starting transcription stream (Hint: ${lang}, Region: ${transcribeClient.config.region})`);
 
     const response = await transcribeClient.send(command);
 
@@ -105,7 +100,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("Transcribe Error:", error);
     const message = error.message || "Unknown error";
-    // Check for common AWS permission/configuration errors
+
     if (error.name === "AccessDeniedException") {
       return NextResponse.json({ error: "AWS Access Denied. Check Amplify IAM Role permissions." }, { status: 403 });
     }
@@ -113,19 +108,11 @@ export async function POST(req: NextRequest) {
       const credsProvider = (transcribeClient.config as any).credentials;
       const resolvedCreds = typeof credsProvider === 'function' ? await credsProvider().catch(() => null) : credsProvider;
       const akPrefix = resolvedCreds?.accessKeyId?.substring(0, 4) || 'MISSING';
-      
       const regionProvider = transcribeClient.config.region;
       const resolvedRegion = typeof regionProvider === 'function' ? await (regionProvider as any)().catch(() => 'unknown') : regionProvider;
-      
-      console.error("DEBUG: UnrecognizedClientException details:", {
-        message: error.message,
-        name: error.name,
-        region: resolvedRegion,
-        akPrefix,
-      });
-      
-      return NextResponse.json({ 
-        error: `Invalid AWS Credentials (Unrecognized). Region: ${resolvedRegion}, Key Starts with: ${akPrefix}. Check Amplify Console for trailing spaces / VANI_AWS_ prefix.` 
+
+      return NextResponse.json({
+        error: `Invalid AWS Credentials. Region: ${resolvedRegion}, Key Starts with: ${akPrefix}. Add VANI_ACCESS_KEY_ID in Amplify Console > Environment Variables.`
       }, { status: 401 });
     }
     return NextResponse.json({ error: message }, { status: 500 });

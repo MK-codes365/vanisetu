@@ -1,49 +1,48 @@
 import { S3Client, ListBucketsCommand } from "@aws-sdk/client-s3";
 import { TextractClient } from "@aws-sdk/client-textract";
 import { BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime";
-import { StartStreamTranscriptionCommand, TranscribeStreamingClient } from "@aws-sdk/client-transcribe-streaming";
+import { TranscribeStreamingClient } from "@aws-sdk/client-transcribe-streaming";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { PollyClient } from "@aws-sdk/client-polly";
 
-// Explicitly reference all possible environment variables for Next.js bundling
-const ENV_NAMES = {
-  ACCESS_KEY: 'VANI_AWS_ACCESS_KEY_ID',
-  ACCESS_KEY_ALT: 'VANI_ACCESS_KEY_ID',
-  SECRET_KEY: 'VANI_AWS_SECRET_ACCESS_KEY',
-  SECRET_KEY_ALT: 'VANI_SECRET_ACCESS_KEY',
-  REGION: 'VANI_AWS_REGION',
-  REGION_ALT: 'VANI_REGION',
-  DATA_REGION: 'VANI_AWS_DATA_REGION',
-  DATA_REGION_ALT: 'VANI_DATA_REGION',
-  SESSION_TOKEN: 'VANI_AWS_SESSION_TOKEN',
-  SESSION_TOKEN_ALT: 'VANI_SESSION_TOKEN',
-};
-
+// Reads a key from process.env, trimming whitespace.
+// Checks case-insensitively as a fallback for Amplify quirks.
 function getRawEnv(key: string): string | undefined {
   const val = process.env[key];
   if (val !== undefined) {
     const trimmed = val.trim();
-    if (trimmed.length === 0) {
-      console.warn(`[AWS-ENV] Warning: Key "${key}" exists but is empty.`);
-    }
-    return trimmed;
+    return trimmed.length > 0 ? trimmed : undefined;
   }
-  
-  // Case-insensitive/whitespace-flexible fallback
-  const actualKey = Object.keys(process.env).find(k => k.trim().toUpperCase() === key.toUpperCase());
-  if (actualKey) {
-    const valFallback = process.env[actualKey]?.trim();
-    console.warn(`[AWS-ENV] Map match: Found "${actualKey}" instead of exact "${key}".`);
-    return valFallback;
-  }
-
-  return undefined;
+  // Case-insensitive fallback
+  const actualKey = Object.keys(process.env).find(
+    (k) => k.trim().toUpperCase() === key.toUpperCase()
+  );
+  return actualKey ? process.env[actualKey]?.trim() || undefined : undefined;
 }
 
-export function getAwsCredentials() {
-  const accessKeyId = getRawEnv(ENV_NAMES.ACCESS_KEY) || getRawEnv(ENV_NAMES.ACCESS_KEY_ALT) || "";
-  const secretAccessKey = getRawEnv(ENV_NAMES.SECRET_KEY) || getRawEnv(ENV_NAMES.SECRET_KEY_ALT) || "";
-  const sessionToken = getRawEnv(ENV_NAMES.SESSION_TOKEN) || getRawEnv(ENV_NAMES.SESSION_TOKEN_ALT);
+// --- Lazy credentials / region resolution ---
+// We do NOT read process.env at module load time because in Amplify's
+// serverless SSR environment the variables may not be injected yet.
+// Instead, each exported factory function reads them fresh on every call.
+
+function getCredentials() {
+  const accessKeyId =
+    getRawEnv("VANI_AWS_ACCESS_KEY_ID") ||
+    getRawEnv("VANI_ACCESS_KEY_ID") ||
+    "";
+  const secretAccessKey =
+    getRawEnv("VANI_AWS_SECRET_ACCESS_KEY") ||
+    getRawEnv("VANI_SECRET_ACCESS_KEY") ||
+    "";
+  const sessionToken =
+    getRawEnv("VANI_AWS_SESSION_TOKEN") ||
+    getRawEnv("VANI_SESSION_TOKEN");
+
+  if (!accessKeyId) {
+    console.error(
+      "[AWS] CRITICAL: No access key found. Set VANI_ACCESS_KEY_ID in Amplify Console."
+    );
+  }
 
   return {
     accessKeyId,
@@ -52,70 +51,61 @@ export function getAwsCredentials() {
   };
 }
 
-export function getAwsRegion(type: 'config' | 'data' = 'config') {
-  if (type === 'data') {
-    return getRawEnv(ENV_NAMES.DATA_REGION) || getRawEnv(ENV_NAMES.DATA_REGION_ALT) || "ap-south-1";
+function getRegion(type: "config" | "data" = "config") {
+  if (type === "data") {
+    return (
+      getRawEnv("VANI_AWS_DATA_REGION") ||
+      getRawEnv("VANI_DATA_REGION") ||
+      "ap-south-1"
+    );
   }
-  return getRawEnv(ENV_NAMES.REGION) || getRawEnv(ENV_NAMES.REGION_ALT) || "ca-central-1";
+  return (
+    getRawEnv("VANI_AWS_REGION") ||
+    getRawEnv("VANI_REGION") ||
+    "ca-central-1"
+  );
 }
 
-const credentials = getAwsCredentials();
-const region = getAwsRegion('config');
-const dataRegion = getAwsRegion('data');
-
-console.log("--- AWS Client Initialization (Vani Setu) ---");
-console.log("- Access Key ID found:", credentials.accessKeyId ? `YES (starts with ${credentials.accessKeyId.substring(0, 4)}, len: ${credentials.accessKeyId.length})` : "NO (MISSING)");
-console.log("- Secret Key found:", credentials.secretAccessKey ? `YES (len: ${credentials.secretAccessKey.length})` : "NO (MISSING)");
-console.log("- Config Region (Bedrock):", region);
-console.log("- Data Region (S3/TTS/Transcribe):", dataRegion);
-
-// Runtime diagnostic check for Amplify reserved variables
-if (process.env.AWS_ACCESS_KEY_ID || process.env.AWS_SECRET_ACCESS_KEY) {
-  console.warn("! WARNING: AWS_* reserved variables detected. Amplify may override these. Use VANI_AWS_* instead.");
+// Export helper so API routes can log resolved credentials for debugging
+export function getAwsCredentials() {
+  return getCredentials();
+}
+export function getAwsRegion(type: "config" | "data" = "config") {
+  return getRegion(type);
 }
 
-// Initial connectivity self-test
-if (credentials.accessKeyId && credentials.secretAccessKey) {
-  const testClient = new S3Client({ region: dataRegion, credentials });
-  testClient.send(new ListBucketsCommand({})).then(() => {
-    console.log("- AWS Connectivity Test: SUCCESS");
-  }).catch((err) => {
-    console.error("- AWS Connectivity Test: FAILED", err.name, err.message);
-    if (err.name === 'UnrecognizedClientException') {
-      console.error("  [TIP] Check for trailing spaces in Amplify environment variables.");
-    }
-  });
+// --- Lazy client factories ---
+// Each call creates a fresh client with credentials read at that instant.
+
+export function getS3Client() {
+  return new S3Client({ region: getRegion("data"), credentials: getCredentials() });
 }
 
-console.log("---------------------------------------------------------");
+export function getTextractClient() {
+  return new TextractClient({ region: getRegion("data"), credentials: getCredentials() });
+}
 
-export const s3Client = new S3Client({
-  region: dataRegion,
-  credentials,
-});
+export function getBedrockClient() {
+  return new BedrockRuntimeClient({ region: getRegion("config"), credentials: getCredentials() });
+}
 
-export const textractClient = new TextractClient({
-  region: dataRegion,
-  credentials,
-});
+export function getTranscribeClient() {
+  return new TranscribeStreamingClient({ region: getRegion("data"), credentials: getCredentials() });
+}
 
-// Use the configured region for Bedrock
-export const bedrockClient = new BedrockRuntimeClient({
-  region,
-  credentials,
-});
+export function getPollyClient() {
+  return new PollyClient({ region: getRegion("data"), credentials: getCredentials() });
+}
 
-export const transcribeClient = new TranscribeStreamingClient({
-  region: dataRegion,
-  credentials,
-});
+export function getDynamoClient() {
+  return new DynamoDBClient({ region: getRegion("data"), credentials: getCredentials() });
+}
 
-export const pollyClient = new PollyClient({
-  region: dataRegion,
-  credentials,
-});
-
-export const dynamoClient = new DynamoDBClient({
-  region: dataRegion,
-  credentials,
-});
+// --- Deprecated singleton exports (kept for backward compat, but lazy now) ---
+// These are recreated on first import using the factory functions above.
+export const s3Client = getS3Client();
+export const textractClient = getTextractClient();
+export const bedrockClient = getBedrockClient();
+export const transcribeClient = getTranscribeClient();
+export const pollyClient = getPollyClient();
+export const dynamoClient = getDynamoClient();

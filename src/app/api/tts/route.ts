@@ -1,8 +1,9 @@
-import { pollyClient } from "@/lib/aws";
+import { getPollyClient } from "@/lib/aws";
 import { SynthesizeSpeechCommand, VoiceId, Engine } from "@aws-sdk/client-polly";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
+  const pollyClient = getPollyClient(); // fresh per request
   let body: any;
   try {
     body = await req.json();

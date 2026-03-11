@@ -1,8 +1,9 @@
-import { bedrockClient } from "@/lib/aws";
+import { getBedrockClient } from "@/lib/aws";
 import { InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
+  const bedrockClient = getBedrockClient(); // fresh per request
   try {
     const { transcript, language } = await req.json();
 

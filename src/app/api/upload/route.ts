@@ -1,8 +1,9 @@
-import { s3Client } from "@/lib/aws";
+import { getS3Client } from "@/lib/aws";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
+  const s3Client = getS3Client(); // fresh per request
   try {
     const { imageBase64, filename } = await req.json();
 
