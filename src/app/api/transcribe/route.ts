@@ -110,24 +110,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "AWS Access Denied. Check Amplify IAM Role permissions." }, { status: 403 });
     }
     if (error.name === "UnrecognizedClientException") {
-      const credsProvider = (transcribeClient.config as any).credentials;
-      const resolvedCreds = typeof credsProvider === 'function' ? await credsProvider().catch(() => null) : credsProvider;
-      const ak = resolvedCreds?.accessKeyId || 'MISSING';
-      const akPrefix = ak !== 'MISSING' ? ak.substring(0, 4) : 'MISSING';
+      const akPrefix = (transcribeClient.config as any).credentials?.accessKeyId?.substring(0, 4) || 'MISSING';
+      const currentRegion = transcribeClient.config.region;
       
-      const regionProvider = transcribeClient.config.region;
-      const resolvedRegion = typeof regionProvider === 'function' ? await (regionProvider as any)().catch(() => 'unknown') : regionProvider;
-
       console.error("DEBUG: UnrecognizedClientException details:", {
         message: error.message,
         name: error.name,
-        requestId: error.$metadata?.requestId,
-        resolvedRegion,
+        region: currentRegion,
         akPrefix,
       });
       
       return NextResponse.json({ 
-        error: `Invalid AWS Credentials. Region: ${resolvedRegion}, Key ID Starts with: ${akPrefix}. Check Amplify Console and ensure NO trailing spaces.` 
+        error: `Invalid AWS Credentials (Unrecognized). Region: ${currentRegion}, Key Starts with: ${akPrefix}. Check Amplify Console for trailing spaces / VANI_AWS_ prefix.` 
       }, { status: 401 });
     }
     return NextResponse.json({ error: message }, { status: 500 });

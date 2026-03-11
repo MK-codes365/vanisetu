@@ -21,10 +21,23 @@ const ENV_NAMES = {
 
 function getRawEnv(key: string): string | undefined {
   const val = process.env[key];
-  if (val) return val.trim();
-  // Fallback to manual search for hidden characters (tabs/spaces in names)
-  const actualKey = Object.keys(process.env).find(k => k.trim() === key);
-  return actualKey ? process.env[actualKey]?.trim() : undefined;
+  if (val !== undefined) {
+    const trimmed = val.trim();
+    if (trimmed.length === 0) {
+      console.warn(`[AWS-ENV] Warning: Key "${key}" exists but is empty.`);
+    }
+    return trimmed;
+  }
+  
+  // Case-insensitive/whitespace-flexible fallback
+  const actualKey = Object.keys(process.env).find(k => k.trim().toUpperCase() === key.toUpperCase());
+  if (actualKey) {
+    const valFallback = process.env[actualKey]?.trim();
+    console.warn(`[AWS-ENV] Map match: Found "${actualKey}" instead of exact "${key}".`);
+    return valFallback;
+  }
+
+  return undefined;
 }
 
 export function getAwsCredentials() {
@@ -50,18 +63,27 @@ const credentials = getAwsCredentials();
 const region = getAwsRegion('config');
 const dataRegion = getAwsRegion('data');
 
-console.log("--- AWS Client Initialization (Runtime Check) ---");
-console.log("- Access Key Length:", credentials.accessKeyId.length);
-console.log("- Secret Key Length:", credentials.secretAccessKey.length);
-console.log("- Region:", region);
-console.log("-------------------------------------------------");
+console.log("--- AWS Client Initialization (Vani Setu) ---");
+console.log("- Access Key ID found:", credentials.accessKeyId ? `YES (starts with ${credentials.accessKeyId.substring(0, 4)}, len: ${credentials.accessKeyId.length})` : "NO (MISSING)");
+console.log("- Secret Key found:", credentials.secretAccessKey ? `YES (len: ${credentials.secretAccessKey.length})` : "NO (MISSING)");
+console.log("- Config Region (Bedrock):", region);
+console.log("- Data Region (S3/TTS/Transcribe):", dataRegion);
+
+// Runtime diagnostic check for Amplify reserved variables
+if (process.env.AWS_ACCESS_KEY_ID || process.env.AWS_SECRET_ACCESS_KEY) {
+  console.warn("! WARNING: AWS_* reserved variables detected. Amplify may override these. Use VANI_AWS_* instead.");
+}
+
 // Initial connectivity self-test
 if (credentials.accessKeyId && credentials.secretAccessKey) {
   const testClient = new S3Client({ region: dataRegion, credentials });
   testClient.send(new ListBucketsCommand({})).then(() => {
-    console.log("- AWS Connection Self-Test: SUCCESS");
+    console.log("- AWS Connectivity Test: SUCCESS");
   }).catch((err) => {
-    console.log("- AWS Connection Self-Test: FAILED", err.name, err.message);
+    console.error("- AWS Connectivity Test: FAILED", err.name, err.message);
+    if (err.name === 'UnrecognizedClientException') {
+      console.error("  [TIP] Check for trailing spaces in Amplify environment variables.");
+    }
   });
 }
 

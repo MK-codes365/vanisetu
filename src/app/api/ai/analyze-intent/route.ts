@@ -114,6 +114,13 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("AI Analysis Error:", error);
     const message = error.message || "Unknown error";
+    
+    if (error.name === "UnrecognizedClientException") {
+      return NextResponse.json({ 
+        error: "AWS Credentials not recognized for Bedrock. Check Amplify environment variables." 
+      }, { status: 401 });
+    }
+
     const status = error.name === "ServiceUnavailableException" ? 503 : 500;
     return NextResponse.json({ error: message }, { status });
   }
